@@ -32,12 +32,12 @@
   </ItemGroup>
 
   <ItemGroup>
-    <None Update="appsettings.json">
+    <None Update="ProxmoxMCPSharp.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
-    <None Update="appsettings.*.json">
+    <None Update="ProxmoxMCPSharp.*.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-      <DependentUpon>appsettings.json</DependentUpon>
+      <DependentUpon>ProxmoxMCPSharp.json</DependentUpon>
     </None>
   </ItemGroup>
 

@@ -14,6 +14,8 @@ logs/
 appsettings.Development.json
 appsettings.Local.json
 appsettings.*.Local.json
+*MCPSharp.Local.json
+*MCPSharp.*.Local.json
 secrets.json
 .env
 .env.*
@@ -22,6 +24,8 @@ secrets.json
 import/
 windows_servers.json
 linux_servers.json
+remote_admin_windows_servers.json
+remote_admin_linux_servers.json
 master.key
 
 # Private keys / certificates
