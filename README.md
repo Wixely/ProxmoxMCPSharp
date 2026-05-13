@@ -1,8 +1,8 @@
 # ProxmoxMCPSharp
 
-An MCP (Model Context Protocol) server for Proxmox VE, written in .NET 10.
+An MCP (Model Context Protocol) server for Proxmox VE.
 
-Exposes a broad set of tools an agent can use to:
+Exposes a broad set of tools for:
 
 - Read cluster, node, VM (QEMU) and container (LXC) statistics and diagnostics
 - Start, stop, reboot, shutdown, suspend, resume and reset VMs and containers
@@ -13,11 +13,11 @@ Exposes a broad set of tools an agent can use to:
 - Inspect node tasks, status, logs and RRD performance data
 - Configure node networking (bridges) with pending/reload/revert semantics
 
-The server uses the official Proxmox PVE2 HTTPS API (`api2/json/...`) only — no scraping, no shell tricks.
+The server uses the official Proxmox PVE2 HTTPS API (`api2/json/...`).
 
 ## Configuration
 
-All settings live under `Proxmox` in `appsettings.json` (or via environment variables prefixed with `PROXMOXMCP_`).
+All settings live under `Proxmox` in `ProxmoxMCPSharp.json` (or via environment variables prefixed with `PROXMOXMCP_`). Environment variables win over JSON; use `__` for nested keys, numeric indexes for arrays such as `PROXMOXMCP_Proxmox__AllowedNodes__0=pve1`, and `true`/`false` for booleans.
 
 A `ReadOnly` flag is **enabled by default** and blocks every write/destroy tool until it is set to `false`. Destructive operations also require `AllowDestroy=true`, manual backups require `AllowManualBackup=true`, and snapshot rollback requires `AllowSnapshotRollback=true`.
 
@@ -37,6 +37,8 @@ docker run --rm -p 5705:5705 \
   -e PROXMOXMCP_Proxmox__ApiTokenId='root@pam!mcp' \
   -e PROXMOXMCP_Proxmox__ApiTokenSecret='...' \
   -e PROXMOXMCP_Proxmox__IgnoreCertificateErrors=true \
+  -e PROXMOXMCP_Proxmox__AllowedNodes__0=pve1 \
+  -e PROXMOXMCP_Server__Password=change-me \
   ghcr.io/wixely/proxmoxmcpsharp:latest
 ```
 
@@ -57,9 +59,9 @@ sc.exe start ProxmoxMCPSharp
 
 The host detects `WindowsServiceHelpers.IsWindowsService()` and switches to service mode automatically.
 
-## Claude MCP
+## MCP client connection
 
-Add this entry to your Claude MCP config (`claude_desktop_config.json` / `~/.config/claude/`):
+Use the HTTP endpoint from any Streamable HTTP MCP client:
 
 ```json
 {
@@ -71,11 +73,3 @@ Add this entry to your Claude MCP config (`claude_desktop_config.json` / `~/.con
   }
 }
 ```
-
-## Releases
-
-Tag a commit `v*` and the GitHub Actions workflow publishes:
-
-- `ProxmoxMCPSharp-win-x64` and `-standalone`
-- `ProxmoxMCPSharp-linux-x64` and `-standalone`
-- Multi-arch Docker image (`linux/amd64`, `linux/arm64`) pushed to GHCR
