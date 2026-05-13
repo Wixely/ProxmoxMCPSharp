@@ -23,6 +23,7 @@ ENV DOTNET_ENVIRONMENT=Production \
     PROXMOXMCP_Server__Host=0.0.0.0 \
     PROXMOXMCP_Server__Port=5705 \
     PROXMOXMCP_Server__Path=/mcp \
+    PROXMOXMCP_Server__Password= \
     PROXMOXMCP_Proxmox__ReadOnly=true
 
 RUN mkdir -p /app/logs && chown -R $APP_UID:0 /app

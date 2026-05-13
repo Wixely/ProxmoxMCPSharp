@@ -132,4 +132,7 @@ public sealed class ServerOptions
 
     /// <summary>Service name when running as a Windows Service.</summary>
     public string WindowsServiceName { get; set; } = "ProxmoxMCPSharp";
+
+    /// <summary>Optional MCP endpoint password. Blank disables MCP password auth.</summary>
+    public string Password { get; set; } = string.Empty;
 }

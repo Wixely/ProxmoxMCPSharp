@@ -25,6 +25,7 @@ Authentication supports either:
 
 - API token (preferred): `ApiTokenId` (e.g. `root@pam!mcp`) and `ApiTokenSecret`.
 - Ticket auth: `Username` (with realm), `Password`, optional `TotpCode`.
+- `Server:Password` is blank by default. Set it to require an MCP endpoint password; clients may send `Authorization: Bearer <password>`, the Basic auth password, or `X-MCP-Password`.
 
 ## Running
 

@@ -6,6 +6,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Hosting.WindowsServices;
 using ProxmoxMCPSharp.Configuration;
+using ProxmoxMCPSharp.Hosting;
 using ProxmoxMCPSharp.Services;
 using Serilog;
 
@@ -19,6 +20,10 @@ public static class Program
         // so resolve config and logs relative to the executable.
         var contentRoot = AppContext.BaseDirectory;
         var isService = WindowsServiceHelpers.IsWindowsService();
+        if (!isService)
+        {
+            McpSharpIcon.ApplyConsoleWindowIcon();
+        }
 
         Log.Logger = new LoggerConfiguration()
             .MinimumLevel.Information()
@@ -106,6 +111,9 @@ public static class Program
                 server.Host, server.Port, server.Path, pve.IsReadOnly, pve.Options.AllowDestroy,
                 isService ? "WindowsService" : "Console", contentRoot);
 
+            app.UseMiddleware<McpPasswordMiddleware>();
+
+            app.MapFavicon();
             app.MapGet("/healthz", () => new
             {
                 status = "ok",
