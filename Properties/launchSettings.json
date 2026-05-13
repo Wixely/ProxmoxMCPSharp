@@ -4,7 +4,7 @@
     "ProxmoxMCPSharp": {
       "commandName": "Project",
       "dotnetRunMessages": true,
-      "applicationUrl": "http://localhost:5104",
+      "applicationUrl": "http://localhost:5705",
       "environmentVariables": {
         "DOTNET_ENVIRONMENT": "Development",
         "ASPNETCORE_ENVIRONMENT": "Development",

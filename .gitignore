@@ -1,75 +1,59 @@
-# =============================================================================
-# .NET / dotnet build output
-# =============================================================================
+# Build output
 bin/
 obj/
 out/
 publish/
-[Dd]ebug/
-[Rr]elease/
-x64/
-x86/
-[Aa][Rr][Mm]/
-[Aa][Rr][Mm]64/
-*.dll
-*.exe
-*.pdb
-*.cache
+artifacts/
 *.binlog
-*.user
-*.userosscache
-*.suo
-*.userprefs
-*.sln.docstates
 
-# NuGet
-*.nupkg
-*.snupkg
-.nuget/
-packages/
+# Logs
+logs/
+*.log
+
+# Local secrets / overrides
+appsettings.Development.json
+appsettings.Local.json
+appsettings.*.Local.json
+secrets.json
+.env
+.env.*
+
+# Live inventories and generated key material
+import/
+windows_servers.json
+linux_servers.json
+master.key
+
+# Private keys / certificates
+*.pem
+*.key
+*.pfx
+*.p12
+*.snk
+
+# .NET / NuGet
 project.lock.json
 project.fragment.lock.json
-artifacts/
+*.nuget.props
+*.nuget.targets
+*.nupkg
+*.snupkg
+.packages/
+.nuget/
+packages/
 
-# MSBuild
-[Bb]uild[Ll]og.*
-msbuild.log
-msbuild.err
-msbuild.wrn
-
-# Test results / coverage
-[Tt]est[Rr]esult*/
+# Test and coverage output
 TestResults/
-coverage*
+coverage/
+coverage.*
 *.coverage
 *.coveragexml
 *.trx
 *.opencover.xml
 
-# =============================================================================
-# Editor / IDE
-# =============================================================================
-
-# Visual Studio
-.vs/
-*.suo
-*.ntvs*
-*.njsproj
-*.sln.iml
-*.vspscc
-*.vssscc
-*.builds
-*.pidb
-*.svclog
-*.scc
-launchSettings.local.json
-
-# Visual Studio Code (ignore everything except shared launch/tasks/extensions)
-.vscode/*
-!.vscode/launch.json
-!.vscode/tasks.json
-!.vscode/extensions.json
-!.vscode/settings.shared.json
+# Playwright artifacts
+playwright-report/
+playwright-traces/
 
 # Rider / ReSharper
 .idea/
@@ -77,29 +61,29 @@ launchSettings.local.json
 _ReSharper*/
 *.[Rr]e[Ss]harper
 
-# =============================================================================
-# Runtime / app
-# =============================================================================
-logs/
-*.log
-appsettings.Local.json
-appsettings.Development.json
-appsettings.*.local.json
-*.env
-.env
-.env.*
+# Visual Studio
+.vs/
+*.user
+*.userosscache
+*.suo
+*.sln.docstates
+*.userprefs
 
-# Secrets / user-secrets / certs
-secrets.json
-*.pfx
-*.snk
-*.p12
+# VS Code (keep shared workspace files)
+.vscode/*
+!.vscode/launch.json
+!.vscode/tasks.json
+!.vscode/extensions.json
+!.vscode/settings.json
 
-# =============================================================================
-# OS junk
-# =============================================================================
+# Docker leftovers
+.docker/
+.dotnet/
+
+# OS / editor noise
 .DS_Store
 Thumbs.db
 ehthumbs.db
 Desktop.ini
-$RECYCLE.BIN/
+*.swp
+*~

@@ -1,6 +1,6 @@
 # ProxmoxMCPSharp
 
-An MCP (Model Context Protocol) server for Proxmox VE, written in .NET 8.
+An MCP (Model Context Protocol) server for Proxmox VE, written in .NET 10.
 
 Exposes a broad set of tools an agent can use to:
 
@@ -31,7 +31,7 @@ Authentication supports either:
 ### Docker (recommended)
 
 ```sh
-docker run --rm -p 5104:5104 \
+docker run --rm -p 5705:5705 \
   -e PROXMOXMCP_Proxmox__BaseUrl=https://your-pve:8006/ \
   -e PROXMOXMCP_Proxmox__ApiTokenId='root@pam!mcp' \
   -e PROXMOXMCP_Proxmox__ApiTokenSecret='...' \
@@ -65,7 +65,7 @@ Add this entry to your Claude MCP config (`claude_desktop_config.json` / `~/.con
   "mcpServers": {
     "proxmox": {
       "type": "http",
-      "url": "http://localhost:5104/mcp"
+      "url": "http://localhost:5705/mcp"
     }
   }
 }

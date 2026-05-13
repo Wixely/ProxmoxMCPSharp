@@ -71,7 +71,21 @@ public static class Program
                 .WithToolsFromAssembly();
 
             var server = builder.Configuration.GetSection(ServerOptions.SectionName).Get<ServerOptions>() ?? new ServerOptions();
-            builder.WebHost.ConfigureKestrel(k => k.Listen(IPAddress.Any, server.Port));
+            builder.WebHost.ConfigureKestrel(k =>
+            {
+                if (string.Equals(server.Host, "localhost", StringComparison.OrdinalIgnoreCase))
+                {
+                    k.ListenLocalhost(server.Port);
+                }
+                else if (IPAddress.TryParse(server.Host, out var ip))
+                {
+                    k.Listen(ip, server.Port);
+                }
+                else
+                {
+                    k.ListenAnyIP(server.Port);
+                }
+            });
 
             var app = builder.Build();
 
@@ -92,6 +106,14 @@ public static class Program
                 server.Host, server.Port, server.Path, pve.IsReadOnly, pve.Options.AllowDestroy,
                 isService ? "WindowsService" : "Console", contentRoot);
 
+            app.MapGet("/healthz", () => new
+            {
+                status = "ok",
+                server = "ProxmoxMCPSharp",
+                path = server.Path,
+                readOnly = pve.IsReadOnly,
+                timeUtc = DateTimeOffset.UtcNow,
+            });
             app.MapMcp(server.Path);
 
             app.Run();

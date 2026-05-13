@@ -1,29 +1,35 @@
-FROM --platform=$BUILDPLATFORM mcr.microsoft.com/dotnet/sdk:8.0 AS build
-ARG TARGETARCH
+# syntax=docker/dockerfile:1.7
+
+FROM mcr.microsoft.com/dotnet/sdk:10.0-noble AS build
 WORKDIR /src
 
+COPY NuGet.config global.json Directory.Build.props Directory.Packages.props ./
 COPY ProxmoxMCPSharp.csproj ./
-RUN dotnet restore ProxmoxMCPSharp.csproj -a $TARGETARCH
+RUN dotnet restore ProxmoxMCPSharp.csproj
 
 COPY . .
 RUN dotnet publish ProxmoxMCPSharp.csproj \
     -c Release \
-    -a $TARGETARCH \
     --no-restore \
     -o /app/publish \
     /p:UseAppHost=false
 
-FROM mcr.microsoft.com/dotnet/aspnet:8.0 AS final
+FROM mcr.microsoft.com/dotnet/aspnet:10.0-noble AS runtime
 WORKDIR /app
 
-ENV ASPNETCORE_URLS=http://0.0.0.0:5104 \
+ENV DOTNET_ENVIRONMENT=Production \
+    ASPNETCORE_ENVIRONMENT=Production \
+    DOTNET_RUNNING_IN_CONTAINER=true \
     PROXMOXMCP_Server__Host=0.0.0.0 \
-    PROXMOXMCP_Server__Port=5104 \
+    PROXMOXMCP_Server__Port=5705 \
     PROXMOXMCP_Server__Path=/mcp \
     PROXMOXMCP_Proxmox__ReadOnly=true
 
-COPY --from=build /app/publish .
+RUN mkdir -p /app/logs && chown -R $APP_UID:0 /app
+COPY --from=build --chown=$APP_UID:0 /app/publish ./
 
-EXPOSE 5104
+USER $APP_UID
+EXPOSE 5705
+VOLUME ["/app/logs"]
 
 ENTRYPOINT ["dotnet", "ProxmoxMCPSharp.dll"]
