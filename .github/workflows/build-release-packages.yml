@@ -89,7 +89,7 @@ jobs:
           --self-contained ${{ matrix.self_contained }}
           -o "publish/${{ matrix.runtime_id }}-${{ matrix.package_type }}"
           -p:PublishSingleFile=true
-          -p:EnableCompressionInSingleFile=true
+          -p:EnableCompressionInSingleFile=${{ matrix.self_contained }}
           -p:IncludeNativeLibrariesForSelfExtract=true
           -p:IncludeAllContentForSelfExtract=true
           -p:IsTransformWebConfigDisabled=true
