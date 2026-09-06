@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## v1.2.0-preview.1 - 2026-09-06
 
 - Preserve observed task outcomes when log inspection fails, and leave restart requirements unverified when pending-configuration readback is missing or malformed.
 
@@ -22,4 +22,4 @@
 - Correct task-log documentation and enforce explicit defaults/bounds: 50 tasks (maximum 500), 50 log lines (maximum 1,000), 200 syslog lines (maximum 1,000). Zero/unbounded limits are no longer accepted on these tools.
 - Add syslog offset/date filters and optional disk discovery SMART/partition controls.
 - Bound new diagnostic responses, support cancellation, sanitize diagnostic failures and project aggregate configuration onto safe fields. Omit directory mount options and ticket-login error bodies.
-- Add synthetic HTTP and MCP protocol tests plus Windows/Linux pull-request CI. Live PVE and deployment-mode acceptance remains required before release; see [verification details](docs/diagnostics.md).
+- Add synthetic HTTP and MCP protocol tests plus Windows/Linux pull-request CI. Live PVE and deployment-mode acceptance remains pending and required before stable release; see [verification details](docs/diagnostics.md).

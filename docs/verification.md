@@ -2,7 +2,7 @@
 
 Reviewed: 2026-09-06. Next review: 2026-09-13 or before release. Owner: Agent for implementation and local checks; operator for live acceptance and deployment.
 
-This record tracks the diagnostics and guest-management plan. It distinguishes implemented behavior from synthetic contract coverage, package checks and live acceptance. The feature commits through `3b80293` contain the requested tool surface; release readiness is not yet established.
+This record tracks the diagnostics and guest-management plan. It distinguishes implemented behavior from synthetic contract coverage, package checks and live acceptance. The feature commits through `3b80293` contain the requested tool surface; stable-release readiness is not yet established. The 2026-09-06 user decision allows a GitHub prerelease for acceptance testing; outstanding acceptance is a stable-release gate, not a prerelease blocker.
 
 ## Requirement audit
 
@@ -29,13 +29,25 @@ This record tracks the diagnostics and guest-management plan. It distinguishes i
 - Docker Engine/CLI was not available in the checked Windows/WSL environments, but existing rootless Podman 4.9.3 was available. It successfully built the unchanged Dockerfile for linux/amd64. The container ran as UID 1654 with synthetic upstream configuration and a loopback-only published test port, returned HTTP 200 with `status=ok` and `readOnly=true`, and shut down through bounded SIGTERM. The application directory contained the executable, default configuration, license notices and logs directory. Automatic test-container removal was verified; the test image was removed afterward. Shared build cache was not pruned. No runtime or integration was installed. Docker Engine itself and ARM64 remain untested.
 - `systemd-analyze verify` parsed the example unit but returned failure because `/opt/proxmoxmcpsharp/ProxmoxMCPSharp` is not installed. It also warned about executable/world-writable mode on the Windows-mounted unit file. This is not successful unit/deployment acceptance. The unit has not been registered or started; a deployment must install it with normal root ownership and non-executable, non-world-writable permissions.
 - The existing SYSLIB0057 certificate-loading warning remains. It does not fail the build.
-- The existing MCPHub Proxmox connection answered a read-only version probe with PVE 8.2.2. Its exposed catalogue lacks the new resize/storage-report/LXC-clone tools. This confirms existing connectivity only, not candidate endpoint acceptance. No live Proxmox mutation, push, release, installed-service replacement or service registration was performed.
+- The existing MCPHub Proxmox connection answered a read-only version probe with PVE 8.2.2. Its exposed catalogue lacks the new resize/storage-report/LXC-clone tools. This confirms existing connectivity only, not candidate endpoint acceptance. During those local checks, no live Proxmox mutation, push, release, installed-service replacement or service registration was performed.
 
 ## Remaining work and owners
 
 1. Agent: local fixture and privilege-source audits are complete. All four candidate packages were refreshed after the reporting fixes and passed the four-file content check. Console-host smoke checks preceded those reporting-only fixes; no hosting/dependency code changed afterward.
 2. Operator: provide an explicitly authorized disposable guest/storage scope for management acceptance, and selected nodes/devices for diagnostic comparison on each claimed PVE version.
 3. Operator: authorize isolated Windows Service and systemd acceptance in an appropriate environment; no replacement of the installed MCP service is implicit. OCI container acceptance passed under Podman; any Docker Engine-specific or ARM64 support claim needs its own verification.
-4. Agent: perform the full outgoing-history identity/privacy review if a push is requested, and prepare release notes from the final changelog. Publishing/deployment is a separate action.
+4. Agent: publish v1.2.0-preview.1 after outgoing-history identity/privacy review and successful GitHub package/image builds. The prerelease must not update stable/latest aliases. Deployment remains a separate action.
 
-Recommended next action: obtain authorized live acceptance scope and isolated installed-service test environments. Keep regression tests; generated `artifacts`, `TestResults`, `bin` and `obj` are ignored and disposable after evidence has been reviewed. Do not package smoke-test logs with a release.
+Recommended next action: Agent publishes the prerelease; operator then supplies authorized live acceptance scope and isolated installed-service test environments. Keep regression tests; generated `artifacts`, `TestResults`, `bin` and `obj` are ignored and disposable after evidence has been reviewed. Do not package smoke-test logs with a release.
+
+## Required acceptance before stable release - pending
+
+Reviewed: 2026-09-06. Owner: operator. Next review: 2026-09-13. These requirements remain open; synthetic tests and successful prerelease builds do not complete them.
+
+- [ ] Live diagnostics: compare paged task/log, SMART/ZFS, directory/storage and backup coverage results against selected PVE targets, including unavailable/denied evidence.
+- [ ] Live management: use explicitly authorized disposable QEMU/LXC guests and storage to verify growth, disk/mount retention and moves, resource/configuration pending state, clone/migration, gates and task/readback outcomes.
+- [ ] Compatibility and access: record each claimed PVE version, minimum supported version, effective least-privilege behavior and candidate MCP-client interoperability.
+- [ ] Deployment acceptance: run the candidate in isolated Windows Service and systemd installations; verify start, health, stop and permissions. Verify Docker Engine and ARM64 runtime behavior for any corresponding support claim.
+- [ ] Acceptance evidence and cleanup: record candidate tag, environment/version, authorized scope, expected/actual results, failures and cleanup of test resources. Reconcile any uncertain operation before cleanup. Re-test failures before stable promotion.
+
+Stable publication requires the above evidence and resolution of failures or an explicitly documented reduction of supported scope. Publishing this prerelease does not authorize live mutations, installation, service replacement or new integrations. Keep the regression tests in source control; generated test output is disposable.
