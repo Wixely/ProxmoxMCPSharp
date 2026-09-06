@@ -1,4 +1,5 @@
 using System.ComponentModel;
+using System.Text.Json;
 using ProxmoxMCPSharp.Services;
 using ModelContextProtocol.Server;
 
@@ -7,6 +8,12 @@ namespace ProxmoxMCPSharp.Tools;
 [McpServerToolType]
 public static class LxcTools
 {
+    [McpServerTool(Name = "update_lxc_config", ReadOnly = false, Destructive = true, Idempotent = false, OpenWorld = true),
+     Description("Update validated LXC metadata, resource or network fields, or one managed mount allocation/detachment. Requires fields and expectedDigest; defaults to preview. Resource/disk changes share focused-tool gates. Excludes privilege changes, bind/device mounts, rootfs detachment and physical deletion.")]
+    public static Task<string> UpdateConfig(ProxmoxClient pve, int vmid, JsonElement fields, string expectedDigest,
+        string? node = null, bool dryRun = true, int waitSeconds = 10, CancellationToken ct = default) =>
+        new StructuredConfigurationService(pve).Update("lxc", vmid, node, null, fields, expectedDigest, dryRun, waitSeconds, ct);
+
     [McpServerTool(Name = "list_lxc_containers"),
      Description("List LXC containers on a node.")]
     public static async Task<string> ListContainers(

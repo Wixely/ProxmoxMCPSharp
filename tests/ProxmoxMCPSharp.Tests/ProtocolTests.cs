@@ -11,6 +11,44 @@ namespace ProxmoxMCPSharp.Tests;
 public sealed class ProtocolTests
 {
     [Fact]
+    public async Task StructuredConfigurationObjectAndLegacyPreviewWorkOverMcp()
+    {
+        await using var fixture = new ManagementFixture();
+        var builder = WebApplication.CreateBuilder();
+        builder.WebHost.UseTestServer();
+        builder.Services.AddSingleton(fixture.Client);
+        builder.Services.AddMcpServer().WithHttpTransport().WithToolsFromAssembly(typeof(TaskTools).Assembly);
+        await using var app = builder.Build();
+        app.MapMcp("/mcp");
+        await app.StartAsync();
+        using var http = app.GetTestClient();
+        await using var transport = new HttpClientTransport(new() { Endpoint = new Uri("http://localhost/mcp") }, http);
+        using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(20));
+        await using var client = await McpClient.CreateAsync(transport, cancellationToken: timeout.Token);
+        var tools = await client.ListToolsAsync(cancellationToken: timeout.Token);
+        var qemu = tools.Single(t => t.Name == "update_qemu_config").ProtocolTool;
+        Assert.Equal(new[] { "vmid" }, qemu.InputSchema.GetProperty("required").EnumerateArray().Select(v => v.GetString()));
+        foreach (var kind in new[] { "qemu", "lxc" })
+        {
+            var result = await client.CallToolAsync("update_" + kind + "_config", new Dictionary<string, object?>
+            {
+                ["vmid"] = 100,
+                ["expectedDigest"] = ManagementFixture.Digest,
+                ["fields"] = new Dictionary<string, object?> { [kind == "qemu" ? "name" : "hostname"] = "guest-a", ["onboot"] = true }
+            }, cancellationToken: timeout.Token);
+            Assert.NotEqual(true, result.IsError);
+        }
+        var legacy = new Dictionary<string, object?> { ["vmid"] = 100, ["keyValuePairs"] = "name=guest-a", ["node"] = "node-a", ["dryRun"] = true };
+        Assert.NotEqual(true, (await client.CallToolAsync("update_qemu_config", legacy, cancellationToken: timeout.Token)).IsError);
+        Assert.All(fixture.Requests, r => Assert.Equal(HttpMethod.Get, r.Method));
+        var count = fixture.Requests.Count;
+        legacy.Remove("dryRun");
+        Assert.True((await client.CallToolAsync("update_qemu_config", legacy, cancellationToken: timeout.Token)).IsError);
+        Assert.Equal(count, fixture.Requests.Count);
+        await app.StopAsync();
+    }
+
+    [Fact]
     public async Task ResizeProtocolDefaultsToPreviewAndDeniesClosedWriteGates()
     {
         await using var fixture = new ManagementFixture();

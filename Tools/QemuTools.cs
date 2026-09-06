@@ -1,4 +1,5 @@
 using System.ComponentModel;
+using System.Text.Json;
 using ProxmoxMCPSharp.Services;
 using ModelContextProtocol.Server;
 
@@ -223,23 +224,17 @@ public static class QemuTools
         return JsonOpts.Pass(await pve.PostAsync($"nodes/{n}/qemu", parameters, ct));
     }
 
-    [McpServerTool(Name = "update_qemu_config"),
-     Description("Update a QEMU VM's configuration. Pass a comma-separated 'key=value' pair list. Requires ReadOnly=false.")]
-    public static async Task<string> UpdateConfig(
+    [McpServerTool(Name = "update_qemu_config", ReadOnly = false, Destructive = true, Idempotent = false, OpenWorld = true),
+     Description("Update validated QEMU metadata, resource or network fields, or one managed disk allocation/attachment/detachment. Supply fields plus expectedDigest for structured preview by default. Legacy keyValuePairs retains write-by-default behavior. Resource/disk changes use the focused tools' gates; no force, lock bypass or physical deletion.")]
+    public static Task<string> UpdateConfig(
         ProxmoxClient pve,
         [Description("VMID of the QEMU VM.")] int vmid,
-        [Description("Comma-separated key=value parameters as accepted by PUT /nodes/{node}/qemu/{vmid}/config.")] string keyValuePairs,
-        [Description("Node name. Falls back to Proxmox:DefaultNode.")] string? node,
-        CancellationToken ct = default)
-    {
-        if (!pve.Options.EnableQemu) throw new InvalidOperationException("QEMU tools are disabled.");
-        pve.EnsureWriteAllowed(nameof(UpdateConfig));
-        pve.EnsureVmAllowed(vmid);
-        var n = pve.ResolveNode(node);
-        var parameters = ParseKvList(keyValuePairs);
-        GuestManagement.ValidateLegacyConfig(pve, parameters);
-        return JsonOpts.Pass(await pve.PutAsync($"nodes/{n}/qemu/{vmid}/config", parameters, ct));
-    }
+        [Description("Legacy key=value list. Device/startup subproperties remain in their field. Mutually exclusive with fields.")] string? keyValuePairs = null,
+        [Description("Node name. Falls back to Proxmox:DefaultNode.")] string? node = null,
+        CancellationToken ct = default,
+        [Description("Validated object of supported PVE configuration fields with scalar values.")] JsonElement? fields = null,
+        string? expectedDigest = null, bool? dryRun = null, int waitSeconds = 10) =>
+        new StructuredConfigurationService(pve).Update("qemu", vmid, node, keyValuePairs, fields, expectedDigest, dryRun, waitSeconds, ct);
 
     [McpServerTool(Name = "clone_qemu"),
      Description("Clone a QEMU VM. Requires ReadOnly=false.")]

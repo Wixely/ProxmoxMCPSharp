@@ -6,7 +6,8 @@ public sealed class GuestConfigurationService(ProxmoxClient pve)
 {
     internal async Task<string> UpdateResources(string kind, int vmid, string expectedDigest, string? node,
         int? cores, int? sockets, int? vcpus, int? memoryMiB, int? balloonMiB, int? swapMiB,
-        double? cpuLimit, int? cpuUnits, bool dryRun, int waitSeconds, CancellationToken ct)
+        double? cpuLimit, int? cpuUnits, bool dryRun, int waitSeconds, CancellationToken ct,
+        Dictionary<string, object?>? additionalFields = null)
     {
         node = GuestManagement.Authorize(pve, kind, node, vmid, storage: false);
         GuestManagement.WriteGate(pve, "Resource changes", pve.Options.AllowResourceChanges, dryRun);
@@ -40,8 +41,11 @@ public sealed class GuestConfigurationService(ProxmoxClient pve)
             Add("swap", swapMiB, 0, 1048576);
         }
         if (fields.Count == 0) throw new ArgumentException("At least one resource change is required.");
+        if (additionalFields is not null)
+            foreach (var field in additionalFields) fields.Add(field.Key, field.Value);
         DiagnosticReads.Bound(waitSeconds, 10, 60, nameof(waitSeconds), 0);
         var guest = await GuestManagement.State(pve, node, kind, vmid, expectedDigest, ct);
+        if (fields.Keys.Any(k => GuestManagement.HasPending(guest.Pending, k))) throw new InvalidOperationException("Requested configuration has unresolved pending changes.");
         string[] resourceKeys = ["cores", "sockets", "vcpus", "memory", "balloon", "swap", "cpulimit", "cpuunits"];
         if (resourceKeys.Any(k => GuestManagement.HasPending(guest.Pending, k))) throw new InvalidOperationException("Resources have unresolved pending changes.");
         long Value(string key, long fallback) => fields.TryGetValue(key, out var value) ? Convert.ToInt64(value) :
@@ -98,7 +102,7 @@ public sealed class GuestConfigurationService(ProxmoxClient pve)
         var hasPending = pendingEntries?.Any(p => p.TryGetProperty("pending", out _) || DiagnosticReads.Number(p, "delete") is > 0);
         var matches = current is { } config && fields.All(kv => kv.Key == "memory"
             ? MemoryValue(config) == Convert.ToInt64(kv.Value)
-            : DiagnosticReads.Text(config, kv.Key) == Convert.ToString(kv.Value, System.Globalization.CultureInfo.InvariantCulture));
+            : StructuredConfigurationService.Equivalent(kv.Key, DiagnosticReads.Text(config, kv.Key), Convert.ToString(kv.Value, System.Globalization.CultureInfo.InvariantCulture)!));
         Serilog.Log.Information("Guest configuration {Kind} {Node} {Vmid}: preview={Preview}, currentMatches={Matches}", kind, node, vmid, dryRun, matches);
         return JsonSerializer.Serialize(new
         {

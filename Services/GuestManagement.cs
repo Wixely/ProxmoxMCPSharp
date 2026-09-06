@@ -116,19 +116,6 @@ internal static class GuestManagement
     public static async Task<JsonElement> Storage(ProxmoxClient pve, string node, string storage, CancellationToken ct) =>
         DiagnosticReads.Data(await pve.ReadAsync($"nodes/{DiagnosticReads.Segment(node)}/storage/{DiagnosticReads.Segment(storage)}/status", ct: ct));
 
-    public static void ValidateLegacyConfig(ProxmoxClient pve, IDictionary<string, object?> fields)
-    {
-        foreach (var key in fields.Keys)
-        {
-            if (key is "name" or "description" or "onboot" or "startup" or "tags" or "digest") continue;
-            if (key is "cores" or "sockets" or "vcpus" or "cpu" or "cpulimit" or "cpuunits" or "memory" or "balloon")
-            {
-                if (!pve.Options.AllowResourceChanges) throw new InvalidOperationException("Resource changes require AllowResourceChanges=true.");
-                throw new InvalidOperationException("Use the typed resource tool for validated CPU/memory changes.");
-            }
-            throw new InvalidOperationException("This configuration field requires a focused management tool; arbitrary device, delete, force and lock parameters are not accepted.");
-        }
-    }
 }
 
 internal sealed record GuestState(JsonElement Config, JsonElement Pending, string Status);

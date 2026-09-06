@@ -76,7 +76,7 @@ public sealed class ProxmoxOptions
     /// <summary>If true, expose cluster-wide tools (resources, status, ha).</summary>
     public bool EnableCluster { get; set; } = true;
 
-    /// <summary>If true, expose node-level network configuration tools (bridges, bonds, vlans).</summary>
+    /// <summary>If true, allow node-level network tools and validated guest network configuration.</summary>
     public bool EnableNetwork { get; set; } = true;
 
     /// <summary>If true, expose task tools (list, status, log, stop).</summary>

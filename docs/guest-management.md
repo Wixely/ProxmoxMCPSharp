@@ -58,7 +58,25 @@ The resource tools conservatively block submission when CPU changes exceed obser
 
 `AllowDiskResize`, `AllowDiskManagement` and `AllowResourceChanges` default to false in configuration. The latter two are shared opt-ins for the subsequent management stages. Destructive source deletion additionally needs explicit deletion intent and `AllowDestroy=true`. No lock bypass or force parameter is exposed.
 
-The legacy QEMU configuration writer cannot act as an arbitrary bypass: disk, delete, force, lock and CPU/memory fields require validated management handling. Metadata fields (`name`, `description`, `onboot`, `startup`, `tags`) retain their legacy route. Structured configuration and typed resource/disk tools in G2 must use the same validation and gates; accepting arbitrary PVE fields is outside the contract. This tightening must be considered when upgrading existing clients.
+## Structured configuration and legacy compatibility
+
+`update_qemu_config` accepts either a `fields` JSON object or the legacy `keyValuePairs` string, exclusively. `update_lxc_config` accepts a `fields` object. Structured calls require `expectedDigest` and default to preview. Values must be unique scalars; arrays, nested objects and nulls are rejected. Requests are bounded to 64 fields and 131,072 characters across field names and values.
+
+```json
+{"vmid":100,"expectedDigest":"<current configuration SHA1>","fields":{"memory":4096,"cores":4,"net0":"virtio=02:00:00:00:00:01,bridge=vmbr0,tag=20"}}
+```
+
+Supported metadata is QEMU `name` or LXC `hostname`, plus `description`, `onboot`, `startup` and `tags`. Startup supports `order`, `up` and `down`, each 0–86,400. Resource fields use their PVE names (`memory`, `balloon`, `swap`, `cpulimit`, `cpuunits`, `cores`, `sockets`, `vcpus`) and the same guest-specific ranges, capacity checks and `AllowResourceChanges` gate as the typed tools. Metadata, network and resource changes are validated together and sent as one configuration request. This does not promise that every field hotplugs together: PVE can leave pending changes or report partial application, so readback remains required.
+
+`net0`–`net31` accepts validated property strings and additionally requires `EnableNetwork`. QEMU models are virtio/e1000/e1000e/rtl8139/vmxnet3, with optional MAC, bridge, VLAN tag/trunk list, firewall, link-down, rate, MTU and queues. LXC supports explicit interface name, veth type, bridge/MAC, IPv4/IPv6 addresses and gateways, VLAN tag/trunk list, firewall, link-down, rate and MTU. VLANs are 1–4094; trunks are semicolon-separated IDs, without ranges. Rate is bounded to 0–1,000,000 in PVE's native units; QEMU queues are 0–64. MTU is 1–65,520 for QEMU VirtIO and 64–65,535 for LXC. Interface/bridge names are bounded to 15 characters. The API retains responsibility for bridge availability and backend-specific constraints. No network interface is implicitly removed.
+
+A disk operation must be the only field in the request. A regular QEMU slot accepts `storage:sizeGiB` allocation syntax and typed cache/discard/SSD/IO-thread/format options, or the volume ID of a discovered owned unused disk for attachment. An LXC `mpN` accepts managed allocation with `mp`, `backup` and `ro`. `delete=<regular slot>` routes to retained-volume detachment; deleting unused volumes, rootfs or boot disks is excluded. These requests use the focused disk service, including `AllowDiskManagement`, ownership, pending-state and capacity checks. Existing disks cannot be overwritten through this route. A disk's `size` property is rejected: physical growth uses resize, and storage moves use the move tools.
+
+Legacy QEMU calls keep their argument names and default to submission unless `dryRun=true` is supplied. When no expected digest is supplied, the service reads one before preflight and passes it through the same concurrency checks. An explicit `digest` in legacy fields is supported; conflicting digests are rejected. Device/startup subproperties remain within their field rather than becoming separate API parameters. Use structured fields when metadata contains an ambiguous `,<field>=` sequence. Legacy output retains `data` (task ID or null) and adds a `management` report with operation/readback evidence; inspect it after uncertain outcomes instead of blindly retrying.
+
+Arbitrary API fields, scripts, force/lock bypasses and privilege changes are rejected. This supported-field contract and the management gates tighten earlier unrestricted calls. Current/pending values are returned separately; NIC readback accounts for PVE model aliases, property ordering and MAC case. No automatic restart occurs.
+
+Network property schemas were checked in both pinned release-period revisions: QEMU `PVE/QemuServer.pm` and LXC [`src/PVE/LXC/Config.pm` (8.2 period)](https://github.com/proxmox/pve-container/blob/ab862d6edf5d2903571596279537c48eb7fac125/src/PVE/LXC/Config.pm), [8.3 period](https://github.com/proxmox/pve-container/blob/a39c5b0617e15aabf5259f9743337beb16c2c173/src/PVE/LXC/Config.pm). This is source review, not live network acceptance.
 
 ## Pinned source review
 
@@ -77,8 +95,8 @@ Current/pending configuration was also checked in these revisions (`PVE/API2/Qem
 
 - Diagnostics M0–M3: implemented and committed, with synthetic tests; live acceptance remains outstanding.
 - G1: resize, current/pending correction, bounded mutations and shared gate enforcement implemented with synthetic and MCP protocol tests.
-- G2: typed resource and disk previews/submission implemented with synthetic tests; structured configuration management remains in progress. Owner: Agent.
+- G2: typed resource/disk operations and structured configuration implemented with synthetic and MCP protocol tests. Live acceptance remains outstanding. Owner: Agent for local checks, operator for live acceptance.
 - G3: managed LXC mount points implemented with synthetic tests; clone/migration parity remains in progress. Owner: Agent.
 - M4: final package/runtime checks and documentation follow implementation. Live mutation acceptance requires an explicitly authorized disposable guest/storage scope; deployment is separate. Owner: operator for live acceptance, Agent for local verification.
 
-Recommended next action: Agent completes G2, then G3, without changing the installed service or using everyday guests as test fixtures.
+Recommended next action: Agent completes G3 clone/migration parity and authorization checks, then final release verification. The installed service and everyday guests are outside the development test scope.
