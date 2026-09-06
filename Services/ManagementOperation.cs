@@ -35,13 +35,21 @@ internal static class ManagementOperation
                     var outcome = exit == "OK" ? "success" : exit is null ? "unknown" : "failure-or-warning";
                     var warnings = new List<string>();
                     // Logs can contain filesystem warnings even when task exitstatus is OK. Never copy raw lines into reports.
-                    var log = await pve.ReadAsync($"nodes/{DiagnosticReads.Segment(node)}/tasks/{DiagnosticReads.Segment(taskId)}/log",
-                        new Dictionary<string, object?> { ["start"] = 0, ["limit"] = 1000 }, ct);
-                    if (DiagnosticReads.Data(log).EnumerateArray().Any(line =>
-                        (DiagnosticReads.Text(line, "t") ?? "").Contains("warn", StringComparison.OrdinalIgnoreCase) ||
-                        (DiagnosticReads.Text(line, "t") ?? "").Contains("fail", StringComparison.OrdinalIgnoreCase)))
-                        warnings.Add("Task log contains warning/failure evidence; inspect get_task_log before assuming filesystem success.");
-                    if (DiagnosticReads.Number(log, "total") is > 1000) warnings.Add("Task log inspection was truncated at 1000 lines.");
+                    try
+                    {
+                        var log = await pve.ReadAsync($"nodes/{DiagnosticReads.Segment(node)}/tasks/{DiagnosticReads.Segment(taskId)}/log",
+                            new Dictionary<string, object?> { ["start"] = 0, ["limit"] = 1000 }, ct);
+                        if (DiagnosticReads.Data(log).EnumerateArray().Any(line =>
+                            (DiagnosticReads.Text(line, "t") ?? "").Contains("warn", StringComparison.OrdinalIgnoreCase) ||
+                            (DiagnosticReads.Text(line, "t") ?? "").Contains("fail", StringComparison.OrdinalIgnoreCase)))
+                            warnings.Add("Task log contains warning/failure evidence; inspect get_task_log before assuming filesystem success.");
+                        if (DiagnosticReads.Number(log, "total") is > 1000) warnings.Add("Task log inspection was truncated at 1000 lines.");
+                    }
+                    catch (Exception ex) when (ex is HttpRequestException or ProxmoxApiException or OperationCanceledException or JsonException or ResponseBudgetException or InvalidOperationException or KeyNotFoundException)
+                    {
+                        warnings.Add("Task log unavailable: " + DiagnosticReads.Error(ex));
+                        warnings.Add("Observed terminal task status is retained, but log warnings and guest filesystem outcomes remain unverified.");
+                    }
                     return new("task-stopped", taskId, outcome, warnings.ToArray());
                 }
                 if (watch.Elapsed.TotalSeconds >= waitSeconds || poll == waitSeconds) break;

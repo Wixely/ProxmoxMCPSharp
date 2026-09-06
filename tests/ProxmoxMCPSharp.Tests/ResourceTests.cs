@@ -7,6 +7,23 @@ namespace ProxmoxMCPSharp.Tests;
 
 public sealed class ResourceTests
 {
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task MissingPendingReadbackDoesNotClaimNoRestart(bool malformed)
+    {
+        await using var f = new ManagementFixture(); Configure(f);
+        var original = f.Override!;
+        f.Override = (request, ct) => request.RequestUri!.AbsolutePath.EndsWith("/pending") && f.Config["digest"]?.ToString() == ManagementFixture.NewDigest
+            ? Task.FromResult<HttpResponseMessage?>(malformed ? Fixture.Json("{}") : new(HttpStatusCode.Forbidden) { Content = new StringContent("synthetic-secret") })
+            : original(request, ct);
+        var report = Fixture.Parse(await GuestResourceTools.UpdateQemu(f.Client, 100, ManagementFixture.Digest, memoryMiB: 2048, dryRun: false));
+        Assert.True(report.GetProperty("currentMatchesRequested").GetBoolean());
+        Assert.Equal("unverified", report.GetProperty("restart").GetString());
+        Assert.Equal(JsonValueKind.Null, report.GetProperty("pending").ValueKind);
+        Assert.DoesNotContain("synthetic-secret", report.GetRawText());
+        Assert.Single(f.Requests, r => r.Method != HttpMethod.Get);
+    }
     private static void Configure(ManagementFixture f, bool pending = false)
     {
         f.Options.ReadOnly = false;

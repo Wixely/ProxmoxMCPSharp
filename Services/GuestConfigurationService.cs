@@ -93,7 +93,10 @@ public sealed class GuestConfigurationService(ProxmoxClient pve)
                 try
                 {
                     current = DiagnosticReads.Data(await pve.ReadAsync(path + "/config", new Dictionary<string, object?> { ["current"] = 1 }, ct));
-                    pending = DiagnosticReads.Data(await pve.ReadAsync(path + "/pending", ct: ct));
+                    if (current.Value.ValueKind != JsonValueKind.Object) { current = null; throw new JsonException(); }
+                    var pendingRead = DiagnosticReads.Data(await pve.ReadAsync(path + "/pending", ct: ct));
+                    if (pendingRead.ValueKind != JsonValueKind.Array) throw new JsonException();
+                    pending = pendingRead;
                 }
                 catch (Exception ex) { warnings.Add("Configuration readback unavailable: " + DiagnosticReads.Error(ex)); }
             }
@@ -120,7 +123,7 @@ public sealed class GuestConfigurationService(ProxmoxClient pve)
             current = current is { } c ? DiagnosticReads.Project(c, keys) : null,
             pending = pendingEntries?.Select(p => DiagnosticReads.Project(p, "key", "value", "pending", "delete")),
             currentMatchesRequested = matches,
-            restart = hasPending == true ? "pending-changes-may-require-restart" : matches ? "no-pending-requested-values-observed" : "unverified",
+            restart = hasPending is null ? "unverified" : hasPending == true ? "pending-changes-may-require-restart" : matches ? "no-pending-requested-values-observed" : "unverified",
             operation,
             capacityEvidence = evidence,
             warnings,

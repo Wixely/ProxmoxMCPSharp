@@ -8,6 +8,36 @@ namespace ProxmoxMCPSharp.Tests;
 
 public sealed class ReadTests
 {
+    [Theory]
+    [InlineData("{\"health\":\"PASSED\",\"attributes\":[{\"id\":5,\"raw\":7}],\"type\":\"ata\"}")]
+    [InlineData("{\"health\":\"UNKNOWN\",\"text\":\"NVMe vendor-specific health detail\"}")]
+    [InlineData("{\"text\":\"No health field supplied\"}")]
+    public async Task SmartPreservesVendorAndMissingHealthEvidence(string evidence)
+    {
+        await using var f = new Fixture();
+        f.Respond = (_, _) => Task.FromResult(Fixture.Json(evidence));
+        var result = Fixture.Parse(await DiskTools.GetSmart(f.Client, "/dev/sda"));
+        Assert.Equal(evidence, result.GetProperty("data").GetRawText());
+    }
+
+    [Fact]
+    public async Task PagingCanPassUnrelatedTasksAndPreservesEmptyChangedPage()
+    {
+        await using var f = new Fixture();
+        var page = 0;
+        f.Respond = (_, _) => Task.FromResult(Fixture.Json(++page switch
+        {
+            1 => "[{\"type\":\"aptupdate\",\"status\":\"OK\"}]",
+            2 => "[{\"type\":\"vzdump\",\"id\":\"100\",\"status\":\"OK\"}]",
+            _ => "[]"
+        }, page == 3 ? 1 : 2));
+        Assert.Contains("aptupdate", await TaskTools.ListTasks(f.Client, start: 0, limit: 1));
+        Assert.Contains("vzdump", await TaskTools.ListTasks(f.Client, start: 1, limit: 1));
+        var changed = Fixture.Parse(await TaskTools.ListTasks(f.Client, start: 2, limit: 1));
+        Assert.Empty(changed.GetProperty("data").EnumerateArray());
+        Assert.Equal(1, changed.GetProperty("total").GetInt32());
+        Assert.Contains("start=2", f.Requests[^1].Query);
+    }
     [Fact]
     public async Task TaskFiltersAndPagingPreserveEnvelope()
     {

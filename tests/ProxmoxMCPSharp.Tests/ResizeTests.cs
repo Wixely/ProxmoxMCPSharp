@@ -7,6 +7,23 @@ namespace ProxmoxMCPSharp.Tests;
 
 public sealed class ResizeTests
 {
+    [Theory]
+    [InlineData("OK", "success")]
+    [InlineData("ERROR", "failure-or-warning")]
+    public async Task TerminalStatusSurvivesDeniedTaskLog(string exit, string outcome)
+    {
+        await using var f = new ManagementFixture(); f.EnableResize();
+        f.TaskExit = exit;
+        f.Override = (request, _) => Task.FromResult<HttpResponseMessage?>(request.RequestUri!.AbsolutePath.EndsWith("/log")
+            ? new(HttpStatusCode.Forbidden) { Content = new StringContent("synthetic-secret") } : null);
+        var result = await GuestDiskTools.ResizeLxc(f.Client, 100, "rootfs", "+10G", ManagementFixture.Digest, dryRun: false, waitSeconds: 0);
+        var report = Fixture.Parse(result);
+        Assert.Equal(outcome, report.GetProperty("operation").GetProperty("TaskOutcome").GetString());
+        Assert.Contains("Task log unavailable", result);
+        Assert.DoesNotContain("synthetic-secret", result);
+        Assert.Equal("unverified", report.GetProperty("guestFilesystem").GetString());
+        Assert.Single(f.Requests, r => r.Method != HttpMethod.Get);
+    }
     [Fact]
     public async Task PreviewWorksReadOnlyAndResolvesBinaryIncrement()
     {

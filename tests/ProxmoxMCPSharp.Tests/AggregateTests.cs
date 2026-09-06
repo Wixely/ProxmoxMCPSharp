@@ -9,6 +9,27 @@ namespace ProxmoxMCPSharp.Tests;
 public sealed class AggregateTests
 {
     [Theory]
+    [InlineData("[{\"vmid\":100}]")]
+    [InlineData("[{\"ctime\":1000}]")]
+    public async Task IncompleteArchiveIdentityOrTimeRemainsUnknown(string content)
+    {
+        await using var f = new Fixture(); CoverageFixture(f, content);
+        var report = Fixture.Parse(await BackupTools.GetCoverage(f.Client, "node-a", [100], ["backup-a"], maxAgeHours: 24));
+        Assert.Equal("unknown", report.GetProperty("guests")[0].GetProperty("state").GetString());
+        Assert.True(report.GetProperty("partial").GetBoolean());
+    }
+
+    [Fact]
+    public async Task DuplicateScopeIsCollapsedButDistinctStorageAliasesAreQueried()
+    {
+        await using var f = new Fixture(); CoverageFixture(f, "[]");
+        var report = Fixture.Parse(await BackupTools.GetCoverage(f.Client, "node-a", [100, 100], ["backup-a", "backup-a", "backup-alias"]));
+        Assert.Single(report.GetProperty("guests").EnumerateArray());
+        Assert.Equal(2, report.GetProperty("queriedTargets").GetArrayLength());
+        Assert.Equal(2, f.Requests.Count(r => r.AbsolutePath.EndsWith("/content")));
+        Assert.Contains(f.Requests, r => r.AbsolutePath.Contains("/backup-alias/"));
+    }
+    [Theory]
     [InlineData("\"disable\":1,", "disabled")]
     [InlineData("\"nodes\":\"node-b\",", "node-restricted")]
     [InlineData("", "inactive")]

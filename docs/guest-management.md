@@ -105,6 +105,25 @@ The resize request schemas are identical between the two reviewed release-period
 
 Current/pending configuration was also checked in these revisions (`PVE/API2/Qemu.pm`, `src/PVE/API2/LXC/Config.pm`, and the LXC pending endpoint). This is source evidence; no live VM has been resized during development.
 
+## Privilege checkpoint
+
+These are upstream privilege checks found in the pinned API sources, separate from this application's opt-in gates. Every management workflow also performs guest/configuration and storage/node evidence reads; write permission alone is insufficient. Token privilege separation, resource pools, SDN policy and tag policy can further restrict a request. No role or token configuration is changed by these tools.
+
+| Tools / operation | API contract | Upstream privilege evidence |
+| --- | --- | --- |
+| Current/pending QEMU and LXC configuration | GET guest `config` / `pending` | `VM.Audit` on `/vms/{vmid}` |
+| Both resize tools | PUT guest `resize`; digest, UPID | `VM.Config.Disk` on the guest and `Datastore.AllocateSpace` on its storage |
+| QEMU add/attach/detach and LXC managed mount points | PUT guest `config`; digest; task/synchronous readback | `VM.Config.Disk`; allocation needs `Datastore.AllocateSpace`; existing volumes undergo upstream volume-access checks. No unused-volume deletion is exposed |
+| QEMU/LXC moves | POST `move_disk` / `move_volume`; digest, UPID | `VM.Config.Disk` plus source/target storage checks including `Datastore.AllocateSpace` |
+| Typed resources and equivalent structured fields | PUT guest `config`; digest | `VM.Config.CPU` and/or `VM.Config.Memory`, according to requested fields |
+| Structured network fields | PUT guest `config`; digest | `VM.Config.Network`, plus upstream bridge/SDN access checks |
+| Metadata | PUT guest `config`; digest | QEMU general options use `VM.Config.Options`; QEMU `startup` additionally checks root-path `Sys.Modify`. LXC `hostname` uses `VM.Config.Network`, other ordinary options use `VM.Config.Options`. Tags follow upstream tag policy |
+| QEMU/LXC clone | POST guest `clone`; UPID, no digest parameter | Source `VM.Clone`, destination `VM.Allocate` (or allowed pool allocation), used-storage `Datastore.AllocateSpace` and bridge/SDN checks |
+| QEMU/LXC migration | POST guest `migrate`; UPID, no digest parameter | `VM.Migrate`; remapped storage additionally checks `VM.Config.Disk` and target storage allocation/access |
+| Task evidence | GET task status/log | Own-task visibility or broader node `Sys.Audit`, as described in diagnostic contracts |
+
+Per-field LXC checks were inspected in [`PVE/LXC.pm`](https://github.com/proxmox/pve-container/blob/a39c5b0617e15aabf5259f9743337beb16c2c173/src/PVE/LXC.pm); QEMU checks are in the pinned `PVE/API2/Qemu.pm`. The application's supported backend/slot lists are documented above. Actual backend/online support and effective least-privilege access remain live acceptance items.
+
 ## Implementation status
 
 - Diagnostics M0–M3: implemented and committed, with synthetic tests; live acceptance remains outstanding.

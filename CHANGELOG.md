@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Preserve observed task outcomes when log inspection fails, and leave restart requirements unverified when pending-configuration readback is missing or malformed.
+
 - Exclude local overrides from release packages and Docker build context, include license notices, disable unused IIS assets, and document a systemd unit and verified Windows/Linux console results.
 
 - Add LXC clone/migration and harden QEMU equivalents with source/destination authorization, previews, bounded task/readback evidence and shared management gates. Running migration needs explicit QEMU online mode or LXC restart intent; HA-managed migration is excluded.
