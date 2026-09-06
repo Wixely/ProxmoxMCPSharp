@@ -7,6 +7,12 @@ namespace ProxmoxMCPSharp.Tools;
 [McpServerToolType]
 public static class BackupTools
 {
+    [McpServerTool(Name = "get_backup_coverage", ReadOnly = true, Idempotent = true, OpenWorld = true),
+     Description("Report visible backup coverage for one explicit node, 1-100 VMIDs and 1-20 storage IDs. Defaults: 30-day task lookback, 20 pages. Freshness requires maxAgeHours. Pool selections and incomplete evidence stay unknown; no restore assurance.")]
+    public static Task<string> GetCoverage(ProxmoxClient pve, string node, int[] vmids, string[] storages,
+        int lookbackDays = 30, double? maxAgeHours = null, int taskPageBudget = 20, CancellationToken ct = default) =>
+        new BackupCoverageService(pve).GetAsync(node, vmids, storages, lookbackDays, maxAgeHours, taskPageBudget, ct);
+
     [McpServerTool(Name = "list_backup_jobs"),
      Description("List configured cluster backup (vzdump) jobs.")]
     public static async Task<string> ListBackupJobs(ProxmoxClient pve, CancellationToken ct)

@@ -5,6 +5,10 @@ VisualStudioVersion = 17.0.31903.59
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "ProxmoxMCPSharp", "ProxmoxMCPSharp.csproj", "{B3A0F1A1-3B6B-4F8E-9D2A-7C5D5E4B6F11}"
 EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "tests", "tests", "{0AB3BF05-4346-4AA6-1389-037BE0695223}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ProxmoxMCPSharp.Tests", "tests\ProxmoxMCPSharp.Tests\ProxmoxMCPSharp.Tests.csproj", "{BA830DE8-0433-48D0-9C88-175393B9ED3B}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -15,8 +19,15 @@ Global
 		{B3A0F1A1-3B6B-4F8E-9D2A-7C5D5E4B6F11}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{B3A0F1A1-3B6B-4F8E-9D2A-7C5D5E4B6F11}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{B3A0F1A1-3B6B-4F8E-9D2A-7C5D5E4B6F11}.Release|Any CPU.Build.0 = Release|Any CPU
+		{BA830DE8-0433-48D0-9C88-175393B9ED3B}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{BA830DE8-0433-48D0-9C88-175393B9ED3B}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{BA830DE8-0433-48D0-9C88-175393B9ED3B}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{BA830DE8-0433-48D0-9C88-175393B9ED3B}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{BA830DE8-0433-48D0-9C88-175393B9ED3B} = {0AB3BF05-4346-4AA6-1389-037BE0695223}
 	EndGlobalSection
 EndGlobal

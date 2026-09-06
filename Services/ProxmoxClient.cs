@@ -28,6 +28,41 @@ public sealed class ProxmoxClient : IAsyncDisposable
         _http = BuildHttpClient(_options);
     }
 
+    // The supplied client is owned by this instance. Enables credential-free HTTP contract tests.
+    public ProxmoxClient(IOptions<ProxmoxOptions> options, HttpClient http)
+    {
+        _options = options.Value;
+        _http = http;
+    }
+
+    public async Task<JsonElement> ReadAsync(string path, IDictionary<string, object?>? query = null,
+        CancellationToken ct = default, int maxBytes = 4 * 1024 * 1024)
+    {
+        if (maxBytes is < 1 or > 16 * 1024 * 1024) throw new ArgumentOutOfRangeException(nameof(maxBytes));
+        using var timeout = CancellationTokenSource.CreateLinkedTokenSource(ct);
+        timeout.CancelAfter(TimeSpan.FromSeconds(_options.RequestTimeoutSeconds));
+        var token = timeout.Token;
+        await EnsureAuthenticatedAsync(token).ConfigureAwait(false);
+        var suffix = query is null ? "" : BuildQueryString(query);
+        using var request = new HttpRequestMessage(HttpMethod.Get, "api2/json/" + path + (suffix.Length == 0 ? "" : "?" + suffix));
+        ApplyAuth(request);
+        using var response = await _http.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, token).ConfigureAwait(false);
+        if (!response.IsSuccessStatusCode)
+            throw new ProxmoxApiException($"Proxmox read failed (HTTP {(int)response.StatusCode}).", response.StatusCode);
+        if (response.Content.Headers.ContentLength > maxBytes) throw new ResponseBudgetException();
+        await using var stream = await response.Content.ReadAsStreamAsync(token).ConfigureAwait(false);
+        using var buffer = new MemoryStream();
+        var chunk = new byte[8192];
+        int count;
+        while ((count = await stream.ReadAsync(chunk, token).ConfigureAwait(false)) > 0)
+        {
+            if (buffer.Length + count > maxBytes) throw new ResponseBudgetException();
+            buffer.Write(chunk, 0, count);
+        }
+        using var document = JsonDocument.Parse(buffer.ToArray());
+        return document.RootElement.Clone();
+    }
+
     public ProxmoxOptions Options => _options;
     public bool IsReadOnly => _options.ReadOnly;
 
@@ -181,7 +216,7 @@ public sealed class ProxmoxClient : IAsyncDisposable
             var body = await response.Content.ReadAsStringAsync(ct).ConfigureAwait(false);
             if (!response.IsSuccessStatusCode)
                 throw new ProxmoxApiException(
-                    $"Ticket login failed: {(int)response.StatusCode} {response.ReasonPhrase}. Body: {Truncate(body, 512)}",
+                    $"Ticket login failed (HTTP {(int)response.StatusCode}).",
                     response.StatusCode);
 
             using var doc = JsonDocument.Parse(body);

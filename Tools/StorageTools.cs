@@ -7,6 +7,11 @@ namespace ProxmoxMCPSharp.Tools;
 [McpServerToolType]
 public static class StorageTools
 {
+    [McpServerTool(Name = "get_storage_diagnostics", ReadOnly = true, Idempotent = true, OpenWorld = true),
+     Description("Combine allowlisted storage configuration, availability and applicable directory/ZFS evidence. At most eight GET reads; no content enumeration. Missing evidence and failures are reported separately.")]
+    public static Task<string> GetDiagnostics(ProxmoxClient pve, string storage, string? node = null, CancellationToken ct = default) =>
+        new StorageDiagnosticsService(pve).GetAsync(pve.ResolveNode(node), storage, ct);
+
     [McpServerTool(Name = "list_storages"),
      Description("List storages defined cluster-wide (with their type/content).")]
     public static async Task<string> ListStorages(ProxmoxClient pve, CancellationToken ct)
