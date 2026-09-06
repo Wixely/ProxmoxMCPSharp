@@ -66,6 +66,21 @@ sc.exe start ProxmoxMCPSharp
 
 The host detects `WindowsServiceHelpers.IsWindowsService()` and switches to service mode automatically.
 
+### Linux systemd
+
+An example unit is provided in [deploy/proxmoxmcpsharp.service](deploy/proxmoxmcpsharp.service).
+It runs the self-contained Linux binary from `/opt/proxmoxmcpsharp` as a dedicated
+`proxmoxmcp` user/group. Create that account and directory during an authorized
+deployment, make the application's `logs` directory writable by that account,
+and keep configuration files readable only by the service account and administrator.
+Optional environment overrides belong in `/etc/proxmoxmcpsharp/environment`.
+Install the reviewed unit under `/etc/systemd/system`, then reload systemd and
+enable/start `proxmoxmcpsharp`. The unit uses `Type=simple`; readiness is checked
+through `/healthz`, and SIGTERM requests graceful shutdown.
+
+See the [verification record](docs/verification.md) for tested modes and remaining
+release acceptance. Providing a unit is not evidence of an installed-service test.
+
 ## MCP client connection
 
 Use the HTTP endpoint from any Streamable HTTP MCP client:

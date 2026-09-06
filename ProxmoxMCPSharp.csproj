@@ -9,6 +9,7 @@
     <AssemblyName>ProxmoxMCPSharp</AssemblyName>
     <ApplicationIcon>wmcp.ico</ApplicationIcon>
     <InvariantGlobalization>false</InvariantGlobalization>
+    <PublishIISAssets>false</PublishIISAssets>
   </PropertyGroup>
 
   <ItemGroup>
@@ -42,6 +43,14 @@
     <None Update="ProxmoxMCPSharp.*.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
       <DependentUpon>ProxmoxMCPSharp.json</DependentUpon>
+    </None>
+    <None Update="ProxmoxMCPSharp.Local.json;ProxmoxMCPSharp.*.Local.json">
+      <CopyToOutputDirectory>Never</CopyToOutputDirectory>
+      <CopyToPublishDirectory>Never</CopyToPublishDirectory>
+    </None>
+    <None Update="LICENSE;THIRD-PARTY-NOTICES.md">
+      <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
+      <ExcludeFromSingleFile>true</ExcludeFromSingleFile>
     </None>
   </ItemGroup>
 

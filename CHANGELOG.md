@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Exclude local overrides from release packages and Docker build context, include license notices, disable unused IIS assets, and document a systemd unit and verified Windows/Linux console results.
+
 - Add LXC clone/migration and harden QEMU equivalents with source/destination authorization, previews, bounded task/readback evidence and shared management gates. Running migration needs explicit QEMU online mode or LXC restart intent; HA-managed migration is excluded.
 
 - Add structured QEMU/LXC configuration with shared resource/disk safeguards, validated network properties, digest checks and previews. Preserve legacy QEMU payloads and `data` responses while adding management evidence; device/startup commas stay inside their fields. Unsupported arbitrary fields now fail explicitly.

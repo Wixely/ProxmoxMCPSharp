@@ -1,0 +1,22 @@
+[Unit]
+Description=ProxmoxMCPSharp HTTP MCP server
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+Type=simple
+User=proxmoxmcp
+Group=proxmoxmcp
+WorkingDirectory=/opt/proxmoxmcpsharp
+ExecStart=/opt/proxmoxmcpsharp/ProxmoxMCPSharp
+Environment=DOTNET_ENVIRONMENT=Production
+EnvironmentFile=-/etc/proxmoxmcpsharp/environment
+Restart=on-failure
+RestartSec=5
+TimeoutStopSec=30
+UMask=0077
+NoNewPrivileges=true
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target

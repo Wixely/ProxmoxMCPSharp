@@ -23,6 +23,8 @@
 appsettings.Development.json
 appsettings.Local.json
 appsettings.*.Local.json
+*MCPSharp.Local.json
+*MCPSharp.*.Local.json
 secrets.json
 .env
 .env.*
