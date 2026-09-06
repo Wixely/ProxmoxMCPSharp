@@ -74,7 +74,8 @@ It runs the self-contained Linux binary from `/opt/proxmoxmcpsharp` as a dedicat
 deployment, make the application's `logs` directory writable by that account,
 and keep configuration files readable only by the service account and administrator.
 Optional environment overrides belong in `/etc/proxmoxmcpsharp/environment`.
-Install the reviewed unit under `/etc/systemd/system`, then reload systemd and
+Install the reviewed unit under `/etc/systemd/system` with root ownership and mode
+0644 (not executable or world-writable), then reload systemd and
 enable/start `proxmoxmcpsharp`. The unit uses `Type=simple`; readiness is checked
 through `/healthz`, and SIGTERM requests graceful shutdown.
 
