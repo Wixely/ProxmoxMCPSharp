@@ -18,7 +18,7 @@ This record tracks the diagnostics and guest-management plan. It distinguishes i
 | Bounded reads/mutations and no retry | Byte/page/poll budgets, sanitized failures, readback after uncertain writes; cancellation/timeout fixtures | No claim of exactly-once execution or atomic clone/migration digest checks |
 | Write/destruction/visibility gates | ReadOnly and category/target checks; three false-by-default management allowances; explicit source deletion additionally requires AllowDestroy | Live least-privilege validation; broad legacy inventory semantics remain documented |
 | Compatibility and MCP contract | Legacy QEMU/task payload tests, optional new parameters, structured object calls and tool annotations | Installed-client acceptance against a candidate release |
-| Packaging, CI and documentation | Windows/Linux PR matrix; 7-day test evidence, 1-day inter-job/tag and 3-day development artifacts; changelog, contracts, retained debug configuration and rootless OCI container smoke test | CI has not run for local-only commits; installed-service acceptance and release review |
+| Packaging, CI and documentation | Windows/Linux PR matrix; 7-day test evidence, 1-day inter-job/tag and 3-day development artifacts; changelog, contracts, retained debug configuration and rootless OCI container smoke test | GitHub preview builds passed (record below); installed-service and live acceptance remain pending |
 
 ## Local results
 
@@ -36,9 +36,9 @@ This record tracks the diagnostics and guest-management plan. It distinguishes i
 1. Agent: local fixture and privilege-source audits are complete. All four candidate packages were refreshed after the reporting fixes and passed the four-file content check. Console-host smoke checks preceded those reporting-only fixes; no hosting/dependency code changed afterward.
 2. Operator: provide an explicitly authorized disposable guest/storage scope for management acceptance, and selected nodes/devices for diagnostic comparison on each claimed PVE version.
 3. Operator: authorize isolated Windows Service and systemd acceptance in an appropriate environment; no replacement of the installed MCP service is implicit. OCI container acceptance passed under Podman; any Docker Engine-specific or ARM64 support claim needs its own verification.
-4. Agent: publish v1.2.0-preview.1 after outgoing-history identity/privacy review and successful GitHub package/image builds. The prerelease must not update stable/latest aliases. Deployment remains a separate action.
+4. Agent: prerelease publication and outgoing-history review are complete; see the published verification record below. Deployment remains a separate action.
 
-Recommended next action: Agent publishes the prerelease; operator then supplies authorized live acceptance scope and isolated installed-service test environments. Keep regression tests; generated `artifacts`, `TestResults`, `bin` and `obj` are ignored and disposable after evidence has been reviewed. Do not package smoke-test logs with a release.
+Recommended next action: operator supplies authorized live acceptance scope and isolated installed-service test environments for the published prerelease. Keep regression tests; generated `artifacts`, `TestResults`, `bin` and `obj` are ignored and disposable after evidence has been reviewed. Do not package smoke-test logs with a release.
 
 ## Required acceptance before stable release - pending
 
@@ -51,3 +51,16 @@ Reviewed: 2026-09-06. Owner: operator. Next review: 2026-09-13. These requiremen
 - [ ] Acceptance evidence and cleanup: record candidate tag, environment/version, authorized scope, expected/actual results, failures and cleanup of test resources. Reconcile any uncertain operation before cleanup. Re-test failures before stable promotion.
 
 Stable publication requires the above evidence and resolution of failures or an explicitly documented reduction of supported scope. Publishing this prerelease does not authorize live mutations, installation, service replacement or new integrations. Keep the regression tests in source control; generated test output is disposable.
+
+## Published prerelease verification - 2026-09-06
+
+Owner: Agent. Candidate: v1.2.0-preview.1 at f7e276c.
+
+- [GitHub Verify](https://github.com/Wixely/ProxmoxMCPSharp/actions/runs/34041651350) passed 144 tests on both Windows and Ubuntu, with zero failures/skips.
+- [Release workflow](https://github.com/Wixely/ProxmoxMCPSharp/actions/runs/34041651401) passed all four x64 package jobs, the linux/amd64 and linux/arm64 image build/push, and release publication.
+- Downloaded ZIPs each contain exactly the executable, default JSON, license and third-party notices. Credentials are empty and management gates retain safe defaults. SHA-256 hashes match the four published release assets.
+- [Published release](https://github.com/Wixely/ProxmoxMCPSharp/releases/tag/v1.2.0-preview.1) is a non-draft prerelease. GitHub latest stable remains v1.1.7. Container publication used only 1.2.0-preview.1 and v1.2.0-preview.1, with no stable/latest alias.
+- Outgoing review covered ten commits, their identities/messages, 89 changed text blobs, paths and modes, and the annotated tag. No private context or credential findings; no new binary objects were pushed in Git.
+- Live PVE, candidate-client, installed-service, Docker Engine runtime and ARM64 runtime acceptance remain **PENDING** in the checklist above. Successful image builds do not establish runtime acceptance.
+
+Prerelease publication is complete. Next action: operator performs the authorized acceptance checks before stable promotion. No installed service was replaced.
