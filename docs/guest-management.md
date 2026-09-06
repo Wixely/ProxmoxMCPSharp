@@ -34,6 +34,22 @@ Reports distinguish task status, observed/configured virtual capacity and usable
 
 `get_qemu_pending_config` and `get_lxc_pending_config` preserve the upstream array of current/pending/deleted values. `get_qemu_config(pending=false)` now explicitly sends `current=1`; true sends `current=0`, and null preserves its previous upstream-default behavior.
 
+## Disk attachment, movement and managed mount points
+
+`add_qemu_disk` creates a disk on explicit storage in an empty IDE/SATA/SCSI/VirtIO slot. `sizeGiB` is positive, at most 1 PiB and aligned to a MiB. Supported target backends are dir/nfs/cifs (raw or qcow2) and lvm/lvmthin/zfspool/rbd (raw). Raw is the default QEMU format. Typed cache, discard, SSD and IO-thread options are supported; SCSI IO threads require an active `virtio-scsi-single` controller. Storage content support, node restrictions, active status and available capacity are checked before allocation. Capacity is observed, not reserved.
+
+`attach_qemu_disk` attaches a discovered `unusedN` reference owned by the same guest to an empty slot. `detach_qemu_disk` removes a regular slot through the configuration API without `force`, retaining the physical volume as an unused reference. Boot-order members and the configured boot disk cannot be detached; unresolved boot identity blocks detachment. This protection uses PVE configuration evidence and cannot identify every guest operating-system dependency. Optical, EFI/TPM, cross-guest and explicitly shared volumes are excluded.
+
+`move_qemu_disk` and `move_lxc_volume` move within the same guest to a different explicit storage. The request sends `delete=0` by default. `deleteSource=true` additionally requires `AllowDestroy=true` for submission. Optional bandwidth is 1–1,048,576 KiB/s. LXC moves require a stopped container; the tool never stops it. QEMU moves accept compatible raw/qcow2 target formats; LXC uses its backend's format. Upstream snapshot and backend restrictions still apply and can reject a task after preflight.
+
+`add_lxc_mount_point` allocates a managed volume in an empty `mp0`–`mp31`, with an explicit non-system absolute guest path and optional backup/read-only flags. Bind/device mounts and privilege settings are excluded. Current and pending mount-path collisions are rejected. `detach_lxc_mount_point` retains the managed volume; rootfs detachment is excluded. LXC targets use raw storage volumes or ZFS subvolumes. No guest formatting or initialization is performed.
+
+All seven tools require an expected configuration digest, default to `dryRun=true`, and use the shared node/guest/category restrictions. Submission requires `ReadOnly=false` and `AllowDiskManagement=true`. The tool repeats preflight immediately before the mutation and sends the digest upstream. Task polling and uncertain-response handling use the same bounded, no-retry workflow as resize.
+
+Readback separates current/pending configuration, target capacity, retained unused references and scoped source inventory. A pending allocation is not active. Source retention is verified only when both its unused reference and owned inventory entry are observed. Requested deletion is reported as source visibility, not proof of physical erasure. Task success does not establish guest filesystem usability.
+
+The disk/configuration and move schemas and retention behavior were reviewed in the pinned QEMU/LXC revisions below, including QEMU `PVE/QemuServer.pm` and LXC `src/PVE/LXC/Config.pm`. Contract fixtures cover all seven operations, ownership, boot/pending conflicts, capacity gates, source retention/deletion, and accepted writes followed by response loss. MCP discovery/preview/write-gate checks are synthetic. Live backend and guest-state acceptance remains outstanding.
+
 ## Shared write safeguards
 
 `update_qemu_resources` accepts typed optional cores, sockets, vcpus, memory MiB, balloon MiB, CPU limit and CPU units. `update_lxc_resources` accepts cores, memory/swap MiB, CPU limit and CPU units. Both require an expected digest and default to previews. Submission requires `AllowResourceChanges=true` and `ReadOnly=false`; host capacity reads require `EnableNodes`. Core/socket/vCPU and balloon/memory combinations are validated together, including existing values. Pending resource changes block new submissions. QEMU's scalar and `current=<MiB>` memory syntax are both understood.
@@ -61,8 +77,8 @@ Current/pending configuration was also checked in these revisions (`PVE/API2/Qem
 
 - Diagnostics M0–M3: implemented and committed, with synthetic tests; live acceptance remains outstanding.
 - G1: resize, current/pending correction, bounded mutations and shared gate enforcement implemented with synthetic and MCP protocol tests.
-- G2: typed resource previews/submission implemented; disk and structured configuration management remain in progress. Owner: Agent.
-- G3: managed LXC mount points and clone/migration parity remain in progress. Owner: Agent.
+- G2: typed resource and disk previews/submission implemented with synthetic tests; structured configuration management remains in progress. Owner: Agent.
+- G3: managed LXC mount points implemented with synthetic tests; clone/migration parity remains in progress. Owner: Agent.
 - M4: final package/runtime checks and documentation follow implementation. Live mutation acceptance requires an explicitly authorized disposable guest/storage scope; deployment is separate. Owner: operator for live acceptance, Agent for local verification.
 
 Recommended next action: Agent completes G2, then G3, without changing the installed service or using everyday guests as test fixtures.

@@ -38,6 +38,24 @@ public sealed class ProtocolTests
         result = await client.CallToolAsync("resize_qemu_disk", args, cancellationToken: timeout.Token);
         Assert.True(result.IsError);
         Assert.Equal(count, fixture.Requests.Count);
+        fixture.Config["boot"] = "order=scsi1";
+        var diskTools = await client.ListToolsAsync(cancellationToken: timeout.Token);
+        foreach (var name in new[] { "add_qemu_disk", "attach_qemu_disk", "detach_qemu_disk", "move_qemu_disk", "move_lxc_volume", "add_lxc_mount_point", "detach_lxc_mount_point" })
+        {
+            var diskTool = diskTools.Single(t => t.Name == name).ProtocolTool;
+            Assert.False(diskTool.Annotations!.ReadOnlyHint);
+            Assert.False(diskTool.Annotations.IdempotentHint);
+            Assert.DoesNotContain("dryRun", diskTool.InputSchema.GetProperty("required").EnumerateArray().Select(v => v.GetString()));
+        }
+        var detach = new Dictionary<string, object?> { ["vmid"] = 100, ["disk"] = "scsi0", ["expectedDigest"] = ManagementFixture.Digest };
+        result = await client.CallToolAsync("detach_qemu_disk", detach, cancellationToken: timeout.Token);
+        Assert.NotEqual(true, result.IsError);
+        Assert.All(fixture.Requests, r => Assert.Equal(HttpMethod.Get, r.Method));
+        count = fixture.Requests.Count;
+        detach["dryRun"] = false;
+        result = await client.CallToolAsync("detach_qemu_disk", detach, cancellationToken: timeout.Token);
+        Assert.True(result.IsError);
+        Assert.Equal(count, fixture.Requests.Count);
         await app.StopAsync();
     }
 
