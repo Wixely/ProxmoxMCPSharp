@@ -75,14 +75,14 @@ internal static class GuestManagement
         return fields;
     }
 
-    public static async Task<GuestState> State(ProxmoxClient pve, string node, string kind, int vmid, string? expectedDigest, CancellationToken ct)
+    public static async Task<GuestState> State(ProxmoxClient pve, string node, string kind, int vmid, string? expectedDigest, CancellationToken ct, bool allowTemplate = false)
     {
         var path = Path(node, kind, vmid);
         var config = DiagnosticReads.Data(await pve.ReadAsync(path + "/config", new Dictionary<string, object?> { ["current"] = 1 }, ct));
         if (expectedDigest is not null && !string.Equals(DiagnosticReads.Text(config, "digest"), expectedDigest, StringComparison.OrdinalIgnoreCase))
             throw new InvalidOperationException("Configuration digest changed; read and preview the current configuration again.");
         if (!string.IsNullOrEmpty(DiagnosticReads.Text(config, "lock"))) throw new InvalidOperationException("Guest configuration is locked.");
-        if (DiagnosticReads.Flag(config, "template") == true) throw new InvalidOperationException("Template management is not supported by this operation.");
+        if (!allowTemplate && DiagnosticReads.Flag(config, "template") == true) throw new InvalidOperationException("Template management is not supported by this operation.");
         var pending = DiagnosticReads.Data(await pve.ReadAsync(path + "/pending", ct: ct));
         if (pending.ValueKind != JsonValueKind.Array) throw new InvalidOperationException("Pending configuration is unavailable.");
         var status = DiagnosticReads.Data(await pve.ReadAsync(path + "/status/current", ct: ct));

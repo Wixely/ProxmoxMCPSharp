@@ -78,6 +78,20 @@ Arbitrary API fields, scripts, force/lock bypasses and privilege changes are rej
 
 Network property schemas were checked in both pinned release-period revisions: QEMU `PVE/QemuServer.pm` and LXC [`src/PVE/LXC/Config.pm` (8.2 period)](https://github.com/proxmox/pve-container/blob/ab862d6edf5d2903571596279537c48eb7fac125/src/PVE/LXC/Config.pm), [8.3 period](https://github.com/proxmox/pve-container/blob/a39c5b0617e15aabf5259f9743337beb16c2c173/src/PVE/LXC/Config.pm). This is source review, not live network acceptance.
 
+## Clone and migration
+
+`clone_lxc` adds parity with `clone_qemu`, accepting explicit source/destination IDs and optional target node/storage, name, full/linked mode and bandwidth. New LXC calls require `expectedDigest` and default to preview. Existing QEMU argument names and write-by-default behavior remain; an optional expected digest and `dryRun=true` are now supported. Templates can be cloned, with the upstream default selecting a linked clone for templates and a full clone for ordinary guests when `full` is omitted. Explicit target storage requires full cloning. Source guests are never stopped by the clone wrapper.
+
+`migrate_lxc` accepts an explicit target node, expected digest, optional target storage and bandwidth. A running LXC guest is blocked unless `restartMigration=true` is explicit. That option requests upstream shutdown and restart with downtime; `shutdownTimeout` is 1–600 seconds (default 180). Pinned LXC migration workers reject live migration of running containers. `migrate_qemu` requires `online=true` for a running VM and additionally accepts target storage and `withLocalDisks`. No force, insecure transport or lock-bypass option is exposed. Both migration wrappers block HA-managed guests because upstream HA delegation can override request options.
+
+All four tools require the guest/storage categories and node/cluster reads for preflight. Submission requires `ReadOnly=false` and `AllowDiskManagement=true`, including existing QEMU clone/migrate calls. Source and destination nodes/IDs are authorized before any upstream read. The tool checks source location/type, destination-ID collisions for clones, locks, pending changes, guest run state and selected destination-storage status/content/node restrictions. Cross-node clone requires shared target storage when explicitly selected; source-volume/backend constraints remain upstream checks. No cluster-wide data is returned by the scoped report.
+
+Bandwidth is bounded to 1–1,048,576 KiB/s. Polling uses the shared 0–60 second budget. Reports retain a `data` task ID field for existing QEMU consumers and add operation, downtime and destination-location evidence. Destination presence alone does not prove clone provenance or application health. Unknown responses are never retried automatically.
+
+Neither clone nor migration accepts a digest in the reviewed APIs. The wrapper captures or checks the source digest and repeats configuration, run-state, inventory and HA/storage preflight immediately before submission, but there is no atomic upstream digest check. Concurrent administration can still change eligibility, destination occupancy or HA policy. Storage capacity is not reserved or comprehensively estimated; PVE also checks source-volume sharing, bridge availability and transport/backend constraints. Task and guest verification remains required.
+
+The POST clone/migrate schemas were reviewed in the pinned API sources below. LXC running-guest behavior is implemented in [`PVE/LXC/Migrate.pm`](https://github.com/proxmox/pve-container/blob/a39c5b0617e15aabf5259f9743337beb16c2c173/src/PVE/LXC/Migrate.pm). Synthetic tests cover both guest kinds, preview/write behavior, destination restrictions, templates, explicit migration modes, HA exclusion and response loss. No live clone, migration, shutdown or restart has been performed during development.
+
 ## Pinned source review
 
 The resize request schemas are identical between the two reviewed release-period revisions. Both use PUT, accept a digest, require guest `VM.Config.Disk` and check datastore `Datastore.AllocateSpace`. Both reviewed versions return task IDs. The QEMU worker rechecks digest under its guest lock; LXC performs early checks and repeats them in the locked worker. Both query actual volume size. LXC records updated volume size before attempting raw filesystem growth, which can emit warnings.
@@ -96,7 +110,7 @@ Current/pending configuration was also checked in these revisions (`PVE/API2/Qem
 - Diagnostics M0–M3: implemented and committed, with synthetic tests; live acceptance remains outstanding.
 - G1: resize, current/pending correction, bounded mutations and shared gate enforcement implemented with synthetic and MCP protocol tests.
 - G2: typed resource/disk operations and structured configuration implemented with synthetic and MCP protocol tests. Live acceptance remains outstanding. Owner: Agent for local checks, operator for live acceptance.
-- G3: managed LXC mount points implemented with synthetic tests; clone/migration parity remains in progress. Owner: Agent.
+- G3: managed LXC mount points and clone/migration parity implemented with synthetic tests and MCP discovery checks. Live acceptance remains outstanding. Owner: Agent for local checks, operator for live acceptance.
 - M4: final package/runtime checks and documentation follow implementation. Live mutation acceptance requires an explicitly authorized disposable guest/storage scope; deployment is separate. Owner: operator for live acceptance, Agent for local verification.
 
-Recommended next action: Agent completes G3 clone/migration parity and authorization checks, then final release verification. The installed service and everyday guests are outside the development test scope.
+Recommended next action: Agent reconciles the external plan and completes the requirement audit and local release verification. Operator supplies a separately authorized disposable scope for live acceptance. The installed service and everyday guests are outside the development test scope.

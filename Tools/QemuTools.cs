@@ -236,9 +236,9 @@ public static class QemuTools
         string? expectedDigest = null, bool? dryRun = null, int waitSeconds = 10) =>
         new StructuredConfigurationService(pve).Update("qemu", vmid, node, keyValuePairs, fields, expectedDigest, dryRun, waitSeconds, ct);
 
-    [McpServerTool(Name = "clone_qemu"),
-     Description("Clone a QEMU VM. Requires ReadOnly=false.")]
-    public static async Task<string> Clone(
+    [McpServerTool(Name = "clone_qemu", ReadOnly = false, Destructive = true, Idempotent = false, OpenWorld = true),
+     Description("Clone a QEMU VM/template with source and destination authorization and bounded task/readback evidence. Requires ReadOnly=false and AllowDiskManagement; dryRun=true previews. Existing calls default to submission. Does not stop the source.")]
+    public static Task<string> Clone(
         ProxmoxClient pve,
         [Description("Source VMID.")] int vmid,
         [Description("New VMID for the clone.")] int newVmid,
@@ -247,39 +247,22 @@ public static class QemuTools
         [Description("Target storage for the clone disks.")] string? targetStorage,
         [Description("Target node for the clone (must share storage with source).")] string? targetNode,
         [Description("Node name. Falls back to Proxmox:DefaultNode.")] string? node,
-        CancellationToken ct = default)
-    {
-        if (!pve.Options.EnableQemu) throw new InvalidOperationException("QEMU tools are disabled.");
-        pve.EnsureWriteAllowed(nameof(Clone));
-        pve.EnsureVmAllowed(vmid);
-        pve.EnsureVmAllowed(newVmid);
-        var n = pve.ResolveNode(node);
-        var parameters = new Dictionary<string, object?> { ["newid"] = newVmid };
-        if (!string.IsNullOrWhiteSpace(name)) parameters["name"] = name;
-        if (full is not null) parameters["full"] = full;
-        if (!string.IsNullOrWhiteSpace(targetStorage)) parameters["storage"] = targetStorage;
-        if (!string.IsNullOrWhiteSpace(targetNode)) parameters["target"] = targetNode;
-        return JsonOpts.Pass(await pve.PostAsync($"nodes/{n}/qemu/{vmid}/clone", parameters, ct));
-    }
+        CancellationToken ct = default, string? expectedDigest = null, int? bandwidthKiB = null, bool dryRun = false, int waitSeconds = 10) =>
+        new GuestTransferService(pve).Execute(new("qemu", vmid, true, node, targetNode, newVmid, name, targetStorage, full,
+            BandwidthKiB: bandwidthKiB, ExpectedDigest: expectedDigest, DryRun: dryRun, WaitSeconds: waitSeconds), ct);
 
-    [McpServerTool(Name = "migrate_qemu"),
-     Description("Migrate a QEMU VM to another node. Requires ReadOnly=false.")]
-    public static async Task<string> Migrate(
+    [McpServerTool(Name = "migrate_qemu", ReadOnly = false, Destructive = true, Idempotent = false, OpenWorld = true),
+     Description("Migrate QEMU to an authorized node with task/location readback. Running guests require online=true; no implicit stop or force. HA-managed migration is excluded. Requires ReadOnly=false and AllowDiskManagement; dryRun=true previews.")]
+    public static Task<string> Migrate(
         ProxmoxClient pve,
         [Description("VMID of the QEMU VM.")] int vmid,
         [Description("Target node name.")] string target,
         [Description("If true, use online (live) migration.")] bool? online,
         [Description("Source node name. Falls back to Proxmox:DefaultNode.")] string? node,
-        CancellationToken ct = default)
-    {
-        if (!pve.Options.EnableQemu) throw new InvalidOperationException("QEMU tools are disabled.");
-        pve.EnsureWriteAllowed(nameof(Migrate));
-        pve.EnsureVmAllowed(vmid);
-        var n = pve.ResolveNode(node);
-        var parameters = new Dictionary<string, object?> { ["target"] = target };
-        if (online is not null) parameters["online"] = online;
-        return JsonOpts.Pass(await pve.PostAsync($"nodes/{n}/qemu/{vmid}/migrate", parameters, ct));
-    }
+        CancellationToken ct = default, string? targetStorage = null, bool withLocalDisks = false, int? bandwidthKiB = null,
+        string? expectedDigest = null, bool dryRun = false, int waitSeconds = 10) =>
+        new GuestTransferService(pve).Execute(new("qemu", vmid, false, node, target, TargetStorage: targetStorage, Online: online == true,
+            WithLocalDisks: withLocalDisks, BandwidthKiB: bandwidthKiB, ExpectedDigest: expectedDigest, DryRun: dryRun, WaitSeconds: waitSeconds), ct);
 
     [McpServerTool(Name = "delete_qemu_vm"),
      Description("Permanently destroy a QEMU VM. Requires ReadOnly=false and AllowDestroy=true.")]

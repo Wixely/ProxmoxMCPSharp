@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Add LXC clone/migration and harden QEMU equivalents with source/destination authorization, previews, bounded task/readback evidence and shared management gates. Running migration needs explicit QEMU online mode or LXC restart intent; HA-managed migration is excluded.
+
 - Add structured QEMU/LXC configuration with shared resource/disk safeguards, validated network properties, digest checks and previews. Preserve legacy QEMU payloads and `data` responses while adding management evidence; device/startup commas stay inside their fields. Unsupported arbitrary fields now fail explicitly.
 
 - Add guarded QEMU disk allocation/attachment/detachment, same-guest QEMU/LXC storage moves and managed LXC mount points. Preview by default; detach/move retain volumes, with source deletion separately gated. Report task, pending configuration and volume inventory evidence independently.

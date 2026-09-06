@@ -8,6 +8,23 @@ namespace ProxmoxMCPSharp.Tools;
 [McpServerToolType]
 public static class LxcTools
 {
+    [McpServerTool(Name = "clone_lxc", ReadOnly = false, Destructive = true, Idempotent = false, OpenWorld = true),
+     Description("Clone an LXC guest/template to an explicitly authorized new ID, optional node/storage and hostname. Defaults to preview; submission requires ReadOnly=false and AllowDiskManagement. Source is not stopped. Returns bounded task and destination evidence.")]
+    public static Task<string> Clone(ProxmoxClient pve, int vmid, int newVmid, string expectedDigest,
+        string? hostname = null, bool? full = null, string? targetStorage = null, string? targetNode = null, string? node = null,
+        int? bandwidthKiB = null, bool dryRun = true, int waitSeconds = 10, CancellationToken ct = default) =>
+        new GuestTransferService(pve).Execute(new("lxc", vmid, true, node, targetNode, newVmid, hostname, targetStorage, full,
+            BandwidthKiB: bandwidthKiB, ExpectedDigest: expectedDigest, DryRun: dryRun, WaitSeconds: waitSeconds), ct);
+
+    [McpServerTool(Name = "migrate_lxc", ReadOnly = false, Destructive = true, Idempotent = false, OpenWorld = true),
+     Description("Migrate LXC to an authorized node. Defaults to preview. Running containers require explicit restartMigration=true, which authorizes shutdown and restart with downtime; live migration is unsupported. HA-managed guests are excluded. Submission requires ReadOnly=false and AllowDiskManagement.")]
+    public static Task<string> Migrate(ProxmoxClient pve, int vmid, string target, string expectedDigest, string? node = null,
+        string? targetStorage = null, bool restartMigration = false, int shutdownTimeout = 180, int? bandwidthKiB = null,
+        bool dryRun = true, int waitSeconds = 10, CancellationToken ct = default) =>
+        new GuestTransferService(pve).Execute(new("lxc", vmid, false, node, target, TargetStorage: targetStorage,
+            RestartMigration: restartMigration, ShutdownTimeout: shutdownTimeout, BandwidthKiB: bandwidthKiB,
+            ExpectedDigest: expectedDigest, DryRun: dryRun, WaitSeconds: waitSeconds), ct);
+
     [McpServerTool(Name = "update_lxc_config", ReadOnly = false, Destructive = true, Idempotent = false, OpenWorld = true),
      Description("Update validated LXC metadata, resource or network fields, or one managed mount allocation/detachment. Requires fields and expectedDigest; defaults to preview. Resource/disk changes share focused-tool gates. Excludes privilege changes, bind/device mounts, rootfs detachment and physical deletion.")]
     public static Task<string> UpdateConfig(ProxmoxClient pve, int vmid, JsonElement fields, string expectedDigest,

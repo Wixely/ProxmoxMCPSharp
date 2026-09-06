@@ -27,6 +27,14 @@ public sealed class ProtocolTests
         await using var client = await McpClient.CreateAsync(transport, cancellationToken: timeout.Token);
         var tools = await client.ListToolsAsync(cancellationToken: timeout.Token);
         var qemu = tools.Single(t => t.Name == "update_qemu_config").ProtocolTool;
+        foreach (var name in new[] { "clone_lxc", "migrate_lxc", "clone_qemu", "migrate_qemu" })
+        {
+            var transfer = tools.Single(t => t.Name == name).ProtocolTool;
+            Assert.False(transfer.Annotations!.ReadOnlyHint);
+            Assert.False(transfer.Annotations.IdempotentHint);
+            Assert.DoesNotContain("dryRun", transfer.InputSchema.GetProperty("required").EnumerateArray().Select(v => v.GetString()));
+            Assert.DoesNotContain("waitSeconds", transfer.InputSchema.GetProperty("required").EnumerateArray().Select(v => v.GetString()));
+        }
         Assert.Equal(new[] { "vmid" }, qemu.InputSchema.GetProperty("required").EnumerateArray().Select(v => v.GetString()));
         foreach (var kind in new[] { "qemu", "lxc" })
         {
