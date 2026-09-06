@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Add typed QEMU/LXC resource previews and opt-in updates with host capacity checks and current/pending readback, without automatic restart.
+
 - Add QEMU/LXC managed-disk growth previews and opt-in submission with digest/ownership checks, absolute targets, no mutation retries and separate task/capacity/filesystem outcomes.
 - Add pending-configuration reads and correct explicit `pending=false` QEMU reads. Add management opt-in settings and restrict legacy configuration bypasses; see [guest management](docs/guest-management.md).
 

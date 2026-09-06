@@ -36,6 +36,10 @@ Reports distinguish task status, observed/configured virtual capacity and usable
 
 ## Shared write safeguards
 
+`update_qemu_resources` accepts typed optional cores, sockets, vcpus, memory MiB, balloon MiB, CPU limit and CPU units. `update_lxc_resources` accepts cores, memory/swap MiB, CPU limit and CPU units. Both require an expected digest and default to previews. Submission requires `AllowResourceChanges=true` and `ReadOnly=false`; host capacity reads require `EnableNodes`. Core/socket/vCPU and balloon/memory combinations are validated together, including existing values. Pending resource changes block new submissions. QEMU's scalar and `current=<MiB>` memory syntax are both understood.
+
+The resource tools conservatively block submission when CPU changes exceed observed physical host CPUs or a memory increase exceeds observed free host RAM; CPU overcommit is not implicit. Previews explain these blockers. Application bounds are 1–1024 cores/sockets/vCPUs (maximum 1024 combined), 16–1,048,576 MiB memory, 0–1,048,576 MiB balloon/swap, CPU limit 0–1024, and CPU units 1–10,000 for LXC or 1–262,144 for QEMU. A zero CPU limit retains PVE's unlimited semantics. All requests use invariant numeric formatting. Current and pending values are read back separately; a pending change is not presented as active and no restart occurs.
+
 `AllowDiskResize`, `AllowDiskManagement` and `AllowResourceChanges` default to false in configuration. The latter two are shared opt-ins for the subsequent management stages. Destructive source deletion additionally needs explicit deletion intent and `AllowDestroy=true`. No lock bypass or force parameter is exposed.
 
 The legacy QEMU configuration writer cannot act as an arbitrary bypass: disk, delete, force, lock and CPU/memory fields require validated management handling. Metadata fields (`name`, `description`, `onboot`, `startup`, `tags`) retain their legacy route. Structured configuration and typed resource/disk tools in G2 must use the same validation and gates; accepting arbitrary PVE fields is outside the contract. This tightening must be considered when upgrading existing clients.
@@ -57,7 +61,7 @@ Current/pending configuration was also checked in these revisions (`PVE/API2/Qem
 
 - Diagnostics M0–M3: implemented and committed, with synthetic tests; live acceptance remains outstanding.
 - G1: resize, current/pending correction, bounded mutations and shared gate enforcement implemented with synthetic and MCP protocol tests.
-- G2: typed disk/resource/configuration management remains in progress. Owner: Agent.
+- G2: typed resource previews/submission implemented; disk and structured configuration management remain in progress. Owner: Agent.
 - G3: managed LXC mount points and clone/migration parity remain in progress. Owner: Agent.
 - M4: final package/runtime checks and documentation follow implementation. Live mutation acceptance requires an explicitly authorized disposable guest/storage scope; deployment is separate. Owner: operator for live acceptance, Agent for local verification.
 
