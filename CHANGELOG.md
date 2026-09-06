@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- Add QEMU/LXC managed-disk growth previews and opt-in submission with digest/ownership checks, absolute targets, no mutation retries and separate task/capacity/filesystem outcomes.
+- Add pending-configuration reads and correct explicit `pending=false` QEMU reads. Add management opt-in settings and restrict legacy configuration bypasses; see [guest management](docs/guest-management.md).
+
 - Add read-only SMART, ZFS pool and managed directory tools, plus storage diagnostics and explicitly scoped backup coverage reports.
 - Add task offsets, date/type/VM/status filters and forward log paging. Correct `running=true` to use the active source and filter one bounded page. Preserve upstream totals; reject `running=true` with archived source.
 - Correct task-log documentation and enforce explicit defaults/bounds: 50 tasks (maximum 500), 50 log lines (maximum 1,000), 200 syslog lines (maximum 1,000). Zero/unbounded limits are no longer accepted on these tools.

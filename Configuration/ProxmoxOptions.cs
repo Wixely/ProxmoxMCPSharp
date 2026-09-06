@@ -97,6 +97,15 @@ public sealed class ProxmoxOptions
     /// <summary>If true, allow destroy/delete operations even when ReadOnly is false. Default false.</summary>
     public bool AllowDestroy { get; set; } = false;
 
+    /// <summary>Allow growth of managed guest disks. Also requires ReadOnly=false.</summary>
+    public bool AllowDiskResize { get; set; } = false;
+
+    /// <summary>Allow managed guest disk creation, attachment, detachment and movement.</summary>
+    public bool AllowDiskManagement { get; set; } = false;
+
+    /// <summary>Allow CPU and memory configuration changes.</summary>
+    public bool AllowResourceChanges { get; set; } = false;
+
     /// <summary>If true, the next manual vzdump backup may be triggered. Requires ReadOnly=false.</summary>
     public bool AllowManualBackup { get; set; } = true;
 

@@ -39,14 +39,14 @@ public static class QemuTools
         ProxmoxClient pve,
         [Description("VMID of the QEMU VM.")] int vmid,
         [Description("Node name. Falls back to Proxmox:DefaultNode.")] string? node,
-        [Description("If true return the pending config (with unapplied changes).")] bool? pending,
+        [Description("True includes pending changes; false requests current values. Null preserves the upstream default.")] bool? pending,
         CancellationToken ct = default)
     {
         if (!pve.Options.EnableQemu) throw new InvalidOperationException("QEMU tools are disabled.");
         pve.EnsureVmAllowed(vmid);
         var n = pve.ResolveNode(node);
         var path = $"nodes/{n}/qemu/{vmid}/config";
-        if (pending == true) path += "?current=0";
+        if (pending.HasValue) path += pending.Value ? "?current=0" : "?current=1";
         return JsonOpts.Pass(await pve.GetAsync(path, ct));
     }
 
@@ -237,6 +237,7 @@ public static class QemuTools
         pve.EnsureVmAllowed(vmid);
         var n = pve.ResolveNode(node);
         var parameters = ParseKvList(keyValuePairs);
+        GuestManagement.ValidateLegacyConfig(pve, parameters);
         return JsonOpts.Pass(await pve.PutAsync($"nodes/{n}/qemu/{vmid}/config", parameters, ct));
     }
 

@@ -11,6 +11,37 @@ namespace ProxmoxMCPSharp.Tests;
 public sealed class ProtocolTests
 {
     [Fact]
+    public async Task ResizeProtocolDefaultsToPreviewAndDeniesClosedWriteGates()
+    {
+        await using var fixture = new ManagementFixture();
+        var builder = WebApplication.CreateBuilder();
+        builder.WebHost.UseTestServer();
+        builder.Services.AddSingleton(fixture.Client);
+        builder.Services.AddMcpServer().WithHttpTransport().WithToolsFromAssembly(typeof(TaskTools).Assembly);
+        await using var app = builder.Build();
+        app.MapMcp("/mcp");
+        await app.StartAsync();
+        using var http = app.GetTestClient();
+        await using var transport = new HttpClientTransport(new() { Endpoint = new Uri("http://localhost/mcp") }, http);
+        using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(20));
+        await using var client = await McpClient.CreateAsync(transport, cancellationToken: timeout.Token);
+        var tool = (await client.ListToolsAsync(cancellationToken: timeout.Token)).Single(t => t.Name == "resize_qemu_disk").ProtocolTool;
+        Assert.False(tool.Annotations!.ReadOnlyHint);
+        Assert.False(tool.Annotations.IdempotentHint);
+        Assert.Equal(new[] { "vmid", "disk", "size", "expectedDigest" }, tool.InputSchema.GetProperty("required").EnumerateArray().Select(v => v.GetString()));
+        var args = new Dictionary<string, object?> { ["vmid"] = 100, ["disk"] = "scsi0", ["size"] = "+10G", ["expectedDigest"] = ManagementFixture.Digest };
+        var result = await client.CallToolAsync("resize_qemu_disk", args, cancellationToken: timeout.Token);
+        Assert.NotEqual(true, result.IsError);
+        Assert.All(fixture.Requests, r => Assert.Equal(HttpMethod.Get, r.Method));
+        var count = fixture.Requests.Count;
+        args["dryRun"] = false;
+        result = await client.CallToolAsync("resize_qemu_disk", args, cancellationToken: timeout.Token);
+        Assert.True(result.IsError);
+        Assert.Equal(count, fixture.Requests.Count);
+        await app.StopAsync();
+    }
+
+    [Fact]
     public async Task DiscoveryAndOldCallsWorkInReadOnlyMode()
     {
         await using var fixture = new Fixture();

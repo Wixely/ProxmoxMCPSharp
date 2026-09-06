@@ -19,6 +19,9 @@ Read-only diagnostics now include paged task history/logs, SMART, ZFS pool healt
 managed directory definitions, storage diagnostics and bounded backup coverage.
 See [diagnostic contracts, examples and verification limits](docs/diagnostics.md).
 
+Guest disk growth supports read-only previews and explicitly enabled submission.
+See [guest management safeguards and examples](docs/guest-management.md).
+
 ## Configuration
 
 All settings live under `Proxmox` in `ProxmoxMCPSharp.json` (or via environment variables prefixed with `PROXMOXMCP_`). Environment variables win over JSON; use `__` for nested keys, numeric indexes for arrays such as `PROXMOXMCP_Proxmox__AllowedNodes__0=pve1`, and `true`/`false` for booleans.

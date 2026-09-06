@@ -37,18 +37,31 @@ public sealed class ProxmoxClient : IAsyncDisposable
 
     public async Task<JsonElement> ReadAsync(string path, IDictionary<string, object?>? query = null,
         CancellationToken ct = default, int maxBytes = 4 * 1024 * 1024)
+        => await SendBoundedAsync(HttpMethod.Get, path, query, ct, maxBytes).ConfigureAwait(false);
+
+    // Never retries: losing a response does not prove that a mutation failed.
+    public Task<JsonElement> MutateAsync(HttpMethod method, string path, IDictionary<string, object?> parameters, CancellationToken ct = default)
+    {
+        EnsureWriteAllowed("management");
+        if (method != HttpMethod.Put && method != HttpMethod.Post) throw new ArgumentException("Expected PUT or POST.");
+        return SendBoundedAsync(method, path, parameters, ct, 1024 * 1024);
+    }
+
+    private async Task<JsonElement> SendBoundedAsync(HttpMethod method, string path, IDictionary<string, object?>? parameters,
+        CancellationToken ct, int maxBytes)
     {
         if (maxBytes is < 1 or > 16 * 1024 * 1024) throw new ArgumentOutOfRangeException(nameof(maxBytes));
         using var timeout = CancellationTokenSource.CreateLinkedTokenSource(ct);
         timeout.CancelAfter(TimeSpan.FromSeconds(_options.RequestTimeoutSeconds));
         var token = timeout.Token;
         await EnsureAuthenticatedAsync(token).ConfigureAwait(false);
-        var suffix = query is null ? "" : BuildQueryString(query);
-        using var request = new HttpRequestMessage(HttpMethod.Get, "api2/json/" + path + (suffix.Length == 0 ? "" : "?" + suffix));
+        var suffix = method == HttpMethod.Get && parameters is not null ? BuildQueryString(parameters) : "";
+        using var request = new HttpRequestMessage(method, "api2/json/" + path + (suffix.Length == 0 ? "" : "?" + suffix));
+        if (method != HttpMethod.Get && parameters is not null) request.Content = new FormUrlEncodedContent(FlattenForForm(parameters));
         ApplyAuth(request);
         using var response = await _http.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, token).ConfigureAwait(false);
         if (!response.IsSuccessStatusCode)
-            throw new ProxmoxApiException($"Proxmox read failed (HTTP {(int)response.StatusCode}).", response.StatusCode);
+            throw new ProxmoxApiException($"Proxmox request failed (HTTP {(int)response.StatusCode}).", response.StatusCode);
         if (response.Content.Headers.ContentLength > maxBytes) throw new ResponseBudgetException();
         await using var stream = await response.Content.ReadAsStreamAsync(token).ConfigureAwait(false);
         using var buffer = new MemoryStream();
