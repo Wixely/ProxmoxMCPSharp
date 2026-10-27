@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+
+- Add `/access` tools: list users, roles, ACL entries, token metadata and effective permissions; preview-by-default creation of password-less users and privilege-separated tokens, explicit ACL assignment/removal, token revocation, dependency-checked user deletion, and a composite `provision_service_identity`. Writes need `ReadOnly=false` and the new `AllowAccessManagement` (default false); revocation, ACL removal and deletion also need `AllowDestroy`. Token secrets are returned once and never logged or listed; existing tokens are never rotated; access-administration/console roles and this server's own identity are refused; mutations are never retried and partial state is reported. See [access management](docs/access-management.md).
+
 ## v1.2.0-preview.1 - 2026-09-06
 
 - Preserve observed task outcomes when log inspection fails, and leave restart requirements unverified when pending-configuration readback is missing or malformed.

@@ -1,3 +1,4 @@
+using System.Text.Json;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.TestHost;
@@ -102,6 +103,55 @@ public sealed class ProtocolTests
         result = await client.CallToolAsync("detach_qemu_disk", detach, cancellationToken: timeout.Token);
         Assert.True(result.IsError);
         Assert.Equal(count, fixture.Requests.Count);
+        await app.StopAsync();
+    }
+
+    [Fact]
+    public async Task AccessToolsAdvertiseExplicitInputsAndPreviewByDefault()
+    {
+        await using var fixture = new AccessFixture();
+        var builder = WebApplication.CreateBuilder();
+        builder.WebHost.UseTestServer();
+        builder.Services.AddSingleton(fixture.Client);
+        builder.Services.AddMcpServer().WithHttpTransport().WithToolsFromAssembly(typeof(TaskTools).Assembly);
+        await using var app = builder.Build();
+        app.MapMcp("/mcp");
+        await app.StartAsync();
+        using var http = app.GetTestClient();
+        await using var transport = new HttpClientTransport(new() { Endpoint = new Uri("http://localhost/mcp") }, http);
+        using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(20));
+        await using var client = await McpClient.CreateAsync(transport, cancellationToken: timeout.Token);
+        var tools = await client.ListToolsAsync(cancellationToken: timeout.Token);
+        string[] Required(string name) => tools.Single(t => t.Name == name).ProtocolTool.InputSchema.GetProperty("required").EnumerateArray().Select(v => v.GetString()!).ToArray();
+
+        foreach (var name in new[] { "list_access_users", "list_access_roles", "list_access_acl", "list_user_tokens", "get_access_permissions" })
+            Assert.True(tools.Single(t => t.Name == name).ProtocolTool.Annotations!.ReadOnlyHint);
+        foreach (var name in new[] { "create_access_user", "create_user_token", "set_access_acl", "remove_access_acl", "delete_user_token", "delete_access_user", "provision_service_identity" })
+        {
+            var tool = tools.Single(t => t.Name == name).ProtocolTool;
+            Assert.False(tool.Annotations!.ReadOnlyHint);
+            Assert.False(tool.Annotations.IdempotentHint);
+            Assert.DoesNotContain("dryRun", Required(name));
+            Assert.True(tool.InputSchema.GetProperty("properties").GetProperty("dryRun").GetProperty("default").GetBoolean());
+        }
+        Assert.Equal(new[] { "path", "roleId", "authId" }, Required("set_access_acl"));
+        Assert.Equal(new[] { "userId", "tokenId", "roleId", "path" }, Required("provision_service_identity"));
+
+        var args = new Dictionary<string, object?> { ["userId"] = "monitor@pve", ["tokenId"] = "monitor", ["roleId"] = "PVEAuditor", ["path"] = "/" };
+        var preview = await client.CallToolAsync("provision_service_identity", args, cancellationToken: timeout.Token);
+        Assert.NotEqual(true, preview.IsError);
+        args["dryRun"] = false;
+        Assert.True((await client.CallToolAsync("provision_service_identity", args, cancellationToken: timeout.Token)).IsError);
+        Assert.Empty(fixture.Mutations);
+
+        fixture.EnableWrites();
+        var created = await client.CallToolAsync("provision_service_identity", args, cancellationToken: timeout.Token);
+        Assert.NotEqual(true, created.IsError);
+        Assert.Contains(AccessFixture.Secret, JsonSerializer.Serialize(created));
+        var listing = await client.CallToolAsync("list_user_tokens", new Dictionary<string, object?> { ["userId"] = "monitor@pve" }, cancellationToken: timeout.Token);
+        Assert.DoesNotContain(AccessFixture.Secret, JsonSerializer.Serialize(listing));
+        Assert.True((await client.CallToolAsync("provision_service_identity", args, cancellationToken: timeout.Token)).IsError);
+        Assert.Equal(3, fixture.Mutations.Count());
         await app.StopAsync();
     }
 

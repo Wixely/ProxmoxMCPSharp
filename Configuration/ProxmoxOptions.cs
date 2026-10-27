@@ -94,6 +94,9 @@ public sealed class ProxmoxOptions
     /// <summary>If true, expose backup restore tools (re-creates VMs/CTs from vzdump archives).</summary>
     public bool EnableRestore { get; set; } = true;
 
+    /// <summary>If true, expose read-only user, API token, role and ACL listings. Token secrets are never listed.</summary>
+    public bool EnableAccess { get; set; } = true;
+
     /// <summary>If true, allow destroy/delete operations even when ReadOnly is false. Default false.</summary>
     public bool AllowDestroy { get; set; } = false;
 
@@ -120,6 +123,9 @@ public sealed class ProxmoxOptions
 
     /// <summary>If true, allow setting in-guest user passwords via the QEMU guest agent. Requires ReadOnly=false. Default false.</summary>
     public bool AllowGuestPasswordChange { get; set; } = false;
+
+    /// <summary>Allow creating users, privilege-separated API tokens and ACL assignments. Requires ReadOnly=false; revocation and deletion also need AllowDestroy. Default false.</summary>
+    public bool AllowAccessManagement { get; set; } = false;
 
     /// <summary>Default storage to target for new VM disks and ISO uploads when not specified.</summary>
     public string? DefaultStorage { get; set; }

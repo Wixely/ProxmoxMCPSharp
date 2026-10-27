@@ -29,6 +29,7 @@
     "EnableApt": true,
     "EnableFirewall": true,
     "EnableRestore": true,
+    "EnableAccess": true,
     "AllowDestroy": false,
     "AllowDiskResize": false,
     "AllowDiskManagement": false,
@@ -38,6 +39,7 @@
     "AllowGuestExec": false,
     "AllowGuestFileWrite": false,
     "AllowGuestPasswordChange": false,
+    "AllowAccessManagement": false,
     "DefaultStorage": "local-lvm",
     "DefaultBridge": "vmbr0",
     "DefaultOsType": "l26"
