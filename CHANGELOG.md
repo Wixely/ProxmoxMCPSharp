@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+
+- Advertise `update_qemu_config`/`update_lxc_config` `fields` as a constrained object (known keys, scalar value types, `netN`/disk-slot key patterns) instead of the `true` schema, which hid the contract and broke some clients' schema converters. Runtime validation is unchanged.
+
 ## v1.2.0-preview.1 - 2026-09-06
 
 - Preserve observed task outcomes when log inspection fails, and leave restart requirements unverified when pending-configuration readback is missing or malformed.
