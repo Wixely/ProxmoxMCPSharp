@@ -43,7 +43,7 @@ public sealed class ProxmoxClient : IAsyncDisposable
     public Task<JsonElement> MutateAsync(HttpMethod method, string path, IDictionary<string, object?> parameters, CancellationToken ct = default)
     {
         EnsureWriteAllowed("management");
-        if (method != HttpMethod.Put && method != HttpMethod.Post) throw new ArgumentException("Expected PUT or POST.");
+        if (method != HttpMethod.Put && method != HttpMethod.Post && method != HttpMethod.Delete) throw new ArgumentException("Expected PUT, POST or DELETE.");
         return SendBoundedAsync(method, path, parameters, ct, 1024 * 1024);
     }
 
@@ -55,9 +55,10 @@ public sealed class ProxmoxClient : IAsyncDisposable
         timeout.CancelAfter(TimeSpan.FromSeconds(_options.RequestTimeoutSeconds));
         var token = timeout.Token;
         await EnsureAuthenticatedAsync(token).ConfigureAwait(false);
-        var suffix = method == HttpMethod.Get && parameters is not null ? BuildQueryString(parameters) : "";
+        var inQuery = method == HttpMethod.Get || method == HttpMethod.Delete;
+        var suffix = inQuery && parameters is not null ? BuildQueryString(parameters) : "";
         using var request = new HttpRequestMessage(method, "api2/json/" + path + (suffix.Length == 0 ? "" : "?" + suffix));
-        if (method != HttpMethod.Get && parameters is not null) request.Content = new FormUrlEncodedContent(FlattenForForm(parameters));
+        if (!inQuery && parameters is not null) request.Content = new FormUrlEncodedContent(FlattenForForm(parameters));
         ApplyAuth(request);
         using var response = await _http.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, token).ConfigureAwait(false);
         if (!response.IsSuccessStatusCode)
