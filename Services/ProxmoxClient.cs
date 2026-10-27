@@ -492,6 +492,8 @@ public sealed class ProxmoxClient : IAsyncDisposable
             handler.SslOptions.RemoteCertificateValidationCallback = (_, certificate, chain, errors) =>
             {
                 if (errors == System.Net.Security.SslPolicyErrors.None) return true;
+                if (options.VerifyCertificateHostname &&
+                    errors.HasFlag(System.Net.Security.SslPolicyErrors.RemoteCertificateNameMismatch)) return false;
                 if (certificate is not X509Certificate2 cert || chain is null) return false;
                 chain.ChainPolicy.ExtraStore.Add(trusted);
                 chain.ChainPolicy.RevocationMode = X509RevocationMode.NoCheck;

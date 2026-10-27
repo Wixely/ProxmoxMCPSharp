@@ -11,6 +11,7 @@
     "TotpCode": "",
     "IgnoreCertificateErrors": false,
     "CaCertificatePath": null,
+    "VerifyCertificateHostname": false,
     "RequestTimeoutSeconds": 60,
     "UserAgent": "ProxmoxMCPSharp",
     "DefaultNode": "",
