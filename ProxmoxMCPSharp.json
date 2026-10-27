@@ -1,6 +1,9 @@
 {
   "Proxmox": {
     "BaseUrl": "https://localhost:8006/",
+    "BaseUrls": [],
+    "EndpointRetryAfterSeconds": 30,
+    "EndpointConnectTimeoutSeconds": 5,
     "ApiTokenId": "",
     "ApiTokenSecret": "",
     "Username": "",

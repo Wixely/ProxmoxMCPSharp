@@ -39,6 +39,7 @@ internal static class DiagnosticReads
     {
         ProxmoxApiException api => api.StatusCode is System.Net.HttpStatusCode.Forbidden or System.Net.HttpStatusCode.Unauthorized ? "permission-denied" : $"http-{(int)api.StatusCode}",
         ResponseBudgetException => "response-byte-budget-exceeded",
+        ProxmoxEndpointException endpoint => endpoint.Kind,
         OperationCanceledException => "read-timeout",
         JsonException or InvalidOperationException or KeyNotFoundException => "invalid-or-unavailable-evidence",
         _ => "read-failed"
