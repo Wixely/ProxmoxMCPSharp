@@ -10,6 +10,15 @@ public sealed class ProxmoxOptions
     /// <summary>Base URL for the Proxmox API. e.g. https://pve.example.com:8006/</summary>
     public string BaseUrl { get; set; } = "https://localhost:8006/";
 
+    /// <summary>Ordered API endpoints of nodes in the same cluster, most preferred first. When non-empty, replaces BaseUrl.</summary>
+    public List<string> BaseUrls { get; set; } = new();
+
+    /// <summary>Seconds a failed endpoint is skipped before it is eligible again; doubles on repeated failures up to 8x. Default 30.</summary>
+    public int EndpointRetryAfterSeconds { get; set; } = 30;
+
+    /// <summary>TCP/TLS connect timeout per endpoint attempt, bounding how long an offline node delays a request. Default 5.</summary>
+    public int EndpointConnectTimeoutSeconds { get; set; } = 5;
+
     /// <summary>API token id in the form "user@realm!tokenid". Preferred over username/password.</summary>
     public string? ApiTokenId { get; set; }
 
@@ -30,6 +39,12 @@ public sealed class ProxmoxOptions
 
     /// <summary>Optional path to a PEM file containing the cluster's CA certificate, when not ignoring validation.</summary>
     public string? CaCertificatePath { get; set; }
+
+    /// <summary>
+    /// When true, certificates accepted through <see cref="CaCertificatePath"/> must also match the endpoint's host name.
+    /// Off by default because node certificates often lack the IP address or alias used to connect.
+    /// </summary>
+    public bool VerifyCertificateHostname { get; set; } = false;
 
     /// <summary>HTTP request timeout in seconds.</summary>
     public int RequestTimeoutSeconds { get; set; } = 60;

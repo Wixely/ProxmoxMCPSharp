@@ -73,13 +73,14 @@ public static class Program
             builder.Services.Configure<ServerOptions>(
                 builder.Configuration.GetSection(ServerOptions.SectionName));
 
-            builder.Services.AddSingleton<ProxmoxClient>();
+            builder.Services.AddSingleton(sp => new ProxmoxClient(sp.GetRequiredService<IOptions<ProxmoxOptions>>()));
 
             builder.Services
                 .AddMcpServer()
                 .WithHttpTransport()
                 .WithToolsFromAssembly()
-                .WithStructuredConfigurationSchemas();
+                .WithStructuredConfigurationSchemas()
+                .WithProxmoxEndpointMetadata();
 
             var server = builder.Configuration.GetSection(ServerOptions.SectionName).Get<ServerOptions>() ?? new ServerOptions();
             var authentication = BindSecurity.Validate(server);
@@ -127,7 +128,7 @@ public static class Program
                 contentRoot,
                 $"MCP authentication: {authentication}",
                 $"Read-only: {pve.IsReadOnly}",
-                $"Proxmox API: {pve.Options.BaseUrl}",
+                $"Proxmox API endpoints: {string.Join(", ", pve.EndpointStatuses().Select(e => e.Url))}",
                 $"Allow destroy: {pve.Options.AllowDestroy}");
 
             app.UseMiddleware<McpPasswordMiddleware>();
@@ -140,6 +141,12 @@ public static class Program
                 path = server.Path,
                 authentication = BindSecurity.Describe(serverOptions.CurrentValue),
                 readOnly = pve.IsReadOnly,
+                // Counts only: /healthz is unauthenticated, so endpoint addresses stay behind the MCP password.
+                proxmoxEndpoints = new
+                {
+                    configured = pve.EndpointStatuses().Count,
+                    coolingDown = pve.EndpointStatuses().Count(e => e.State == "cooling-down"),
+                },
                 timeUtc = DateTimeOffset.UtcNow,
             });
             app.MapMcp(server.Path);

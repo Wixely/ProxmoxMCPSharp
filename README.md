@@ -39,6 +39,17 @@ Authentication supports either:
 - `Server:Password` sets the MCP endpoint password; clients may send `Authorization: Bearer <password>`, the Basic auth password, or `X-MCP-Password`. It is blank by default, which is only allowed while `Server:Host` is loopback (`localhost`, `127.0.0.1`, `::1`). Startup fails if the server would listen on any other address without a password. `Server:AllowUnauthenticatedRemote=true` overrides this and logs a warning; it exposes every enabled tool to anyone who can reach the port.
 - `/healthz` reports the effective MCP `authentication` mode (`password`, `none-loopback`, `none-remote-override`) without revealing the password.
 
+With `CaCertificatePath`, any certificate issued by that CA is accepted, whatever host name it was issued for.
+Set `VerifyCertificateHostname=true` to also require the certificate to match the host in `BaseUrl`/`BaseUrls`.
+It is off by default because Proxmox node certificates often lack the IP address or alias used to connect;
+turn it on when you connect by a name the certificate lists. It has no effect with `IgnoreCertificateErrors=true`.
+Without `CaCertificatePath`, normal validation always checks the host name.
+
+For a multi-node cluster, list several nodes' API URLs in preference order with `BaseUrls`
+(e.g. `PROXMOXMCP_Proxmox__BaseUrls__0=https://pve1:8006/`, `..._1=https://pve2:8006/`). Reads move
+to the next node when one is unreachable; mutations are never resent. A single `BaseUrl` keeps working.
+See [endpoint failover](docs/endpoint-failover.md).
+
 ## Running
 
 ### Docker (recommended)

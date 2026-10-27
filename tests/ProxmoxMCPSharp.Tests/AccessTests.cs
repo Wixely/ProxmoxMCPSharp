@@ -234,7 +234,7 @@ public sealed class AccessTests
             var raw = await AccessTools.CreateToken(f.Client, "fixture@pve", "lost", dryRun: false);
             var report = Fixture.Parse(raw);
             Assert.Equal("unknown", report.GetProperty("outcome").GetString());
-            Assert.Equal("read-failed", report.GetProperty("steps")[0].GetProperty("error").GetString());
+            Assert.Equal("mutation-indeterminate", report.GetProperty("steps")[0].GetProperty("error").GetString());
             Assert.True(report.GetProperty("readback").GetProperty("tokenPresent").GetBoolean());
             Assert.Contains(report.GetProperty("warnings").EnumerateArray(), w => w.GetString()!.Contains("revoke it"));
             Assert.DoesNotContain(AccessFixture.Secret, raw);
