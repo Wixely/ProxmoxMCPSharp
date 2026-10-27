@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## v1.2.0-preview.2 - 2026-10-27
 
 - Add opt-in `VerifyCertificateHostname` (default false). With `CaCertificatePath`, certificates from the configured CA are accepted for any host name, as before; when enabled, they must also match the endpoint's host. Default validation and `IgnoreCertificateErrors` are unchanged.
 - Add ordered multi-endpoint support (`BaseUrls`; single `BaseUrl` still works). Reads fail over on unreachable, connect-timeout, TLS or authentication failures within one request budget; failed endpoints back off (30s doubling to 240s by default) and become eligible again without a restart. Mutations go to one recently healthy or freshly probed endpoint and are never resent; transport failures report `mutation-not-delivered` or `mutation-indeterminate`. Certificate validation is unchanged for every endpoint. Tool results carry the serving endpoint in `_meta`, `get_api_endpoints` reports and probes endpoint health, and `/healthz` shows endpoint counts. See [endpoint failover](docs/endpoint-failover.md).
