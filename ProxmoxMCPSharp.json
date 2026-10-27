@@ -49,7 +49,8 @@
     "Port": 5705,
     "Path": "/mcp",
     "WindowsServiceName": "ProxmoxMCPSharp",
-    "Password": ""
+    "Password": "",
+    "AllowUnauthenticatedRemote": false
   },
   "Serilog": {
     "MinimumLevel": {

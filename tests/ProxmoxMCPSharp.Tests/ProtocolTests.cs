@@ -1,9 +1,11 @@
 using System.Text.Json;
+using System.Text.RegularExpressions;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.TestHost;
 using Microsoft.Extensions.DependencyInjection;
 using ModelContextProtocol.Client;
+using ProxmoxMCPSharp.Hosting;
 using ProxmoxMCPSharp.Tools;
 using Xunit;
 
@@ -55,6 +57,85 @@ public sealed class ProtocolTests
         Assert.True((await client.CallToolAsync("update_qemu_config", legacy, cancellationToken: timeout.Token)).IsError);
         Assert.Equal(count, fixture.Requests.Count);
         await app.StopAsync();
+    }
+
+    [Fact]
+    public async Task StructuredConfigurationFieldsAdvertiseConstrainedObjectSchema()
+    {
+        await using var fixture = new ManagementFixture();
+        var builder = WebApplication.CreateBuilder();
+        builder.WebHost.UseTestServer();
+        builder.Services.AddSingleton(fixture.Client);
+        builder.Services.AddMcpServer().WithHttpTransport().WithToolsFromAssembly(typeof(TaskTools).Assembly).WithStructuredConfigurationSchemas();
+        await using var app = builder.Build();
+        app.MapMcp("/mcp");
+        await app.StartAsync();
+        using var http = app.GetTestClient();
+        await using var transport = new HttpClientTransport(new() { Endpoint = new Uri("http://localhost/mcp") }, http);
+        using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(20));
+        await using var client = await McpClient.CreateAsync(transport, cancellationToken: timeout.Token);
+        var tools = await client.ListToolsAsync(cancellationToken: timeout.Token);
+
+        foreach (var tool in tools) AssertNoBooleanSchemas(tool.ProtocolTool.InputSchema, tool.Name);
+        foreach (var (kind, accepted, rejected) in new[]
+        {
+            ("lxc", new[] { "hostname", "onboot", "swap", "net0", "net31", "mp0", "rootfs", "delete", "digest" }, new[] { "name", "sockets", "net32", "scsi0", "unprivileged", "features", "lxc" }),
+            ("qemu", new[] { "name", "onboot", "sockets", "balloon", "net0", "scsi30", "virtio15", "ide3", "delete" }, new[] { "hostname", "swap", "scsi31", "mp0", "efidisk0", "args", "hookscript" }),
+        })
+        {
+            var schema = tools.Single(t => t.Name == "update_" + kind + "_config").ProtocolTool.InputSchema;
+            var fields = schema.GetProperty("properties").GetProperty("fields");
+            Assert.Equal("object", fields.GetProperty("type").GetString());
+            Assert.Equal("string", fields.GetProperty("additionalProperties").GetProperty("type").GetString());
+            var properties = fields.GetProperty("properties");
+            Assert.Equal("boolean", properties.GetProperty("onboot").GetProperty("type").GetString());
+            Assert.Equal("integer", properties.GetProperty("cores").GetProperty("type").GetString());
+            Assert.Equal("number", properties.GetProperty("cpulimit").GetProperty("type").GetString());
+            var names = new Regex(fields.GetProperty("propertyNames").GetProperty("pattern").GetString()!);
+            Assert.All(accepted, key => Assert.Matches(names, key));
+            Assert.All(rejected, key => Assert.DoesNotMatch(names, key));
+        }
+        var lxc = tools.Single(t => t.Name == "update_lxc_config").ProtocolTool.InputSchema;
+        Assert.Contains("fields", lxc.GetProperty("required").EnumerateArray().Select(v => v.GetString()));
+        Assert.Contains("expectedDigest", lxc.GetProperty("required").EnumerateArray().Select(v => v.GetString()));
+        Assert.True(lxc.GetProperty("properties").GetProperty("dryRun").GetProperty("default").GetBoolean());
+
+        var valid = await client.CallToolAsync("update_lxc_config", new Dictionary<string, object?>
+        {
+            ["vmid"] = 100,
+            ["expectedDigest"] = ManagementFixture.Digest,
+            ["fields"] = new Dictionary<string, object?> { ["hostname"] = "guest-a", ["onboot"] = true, ["description"] = "notes" }
+        }, cancellationToken: timeout.Token);
+        Assert.NotEqual(true, valid.IsError);
+        foreach (var fields in new object?[]
+        {
+            new[] { "hostname" },
+            "hostname=guest-a",
+            new Dictionary<string, object?> { ["hostname"] = null },
+            new Dictionary<string, object?> { ["tags"] = new[] { "a" } },
+            new Dictionary<string, object?> { ["onboot"] = new Dictionary<string, object?> { ["value"] = true } },
+            new Dictionary<string, object?> { ["unprivileged"] = false },
+        })
+        {
+            var result = await client.CallToolAsync("update_lxc_config", new Dictionary<string, object?>
+            {
+                ["vmid"] = 100,
+                ["expectedDigest"] = ManagementFixture.Digest,
+                ["fields"] = fields
+            }, cancellationToken: timeout.Token);
+            Assert.True(result.IsError);
+        }
+        Assert.All(fixture.Requests, r => Assert.Equal(HttpMethod.Get, r.Method));
+        await app.StopAsync();
+    }
+
+    private static void AssertNoBooleanSchemas(JsonElement schema, string tool)
+    {
+        Assert.Equal(JsonValueKind.Object, schema.ValueKind);
+        foreach (var keyword in new[] { "additionalProperties", "items", "propertyNames" })
+            if (schema.TryGetProperty(keyword, out var child)) AssertNoBooleanSchemas(child, tool + "." + keyword);
+        if (schema.TryGetProperty("properties", out var properties))
+            foreach (var property in properties.EnumerateObject()) AssertNoBooleanSchemas(property.Value, tool + "." + property.Name);
     }
 
     [Fact]

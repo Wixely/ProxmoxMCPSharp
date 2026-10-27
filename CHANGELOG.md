@@ -3,6 +3,8 @@
 ## Unreleased
 
 - Add `/access` tools: list users, roles, ACL entries, token metadata and effective permissions; preview-by-default creation of password-less users and privilege-separated tokens, explicit ACL assignment/removal, token revocation, dependency-checked user deletion, and a composite `provision_service_identity`. Writes need `ReadOnly=false` and the new `AllowAccessManagement` (default false); revocation, ACL removal and deletion also need `AllowDestroy`. Token secrets are returned once and never logged or listed; existing tokens are never rotated; access-administration/console roles and this server's own identity are refused; mutations are never retried and partial state is reported. See [access management](docs/access-management.md).
+- Advertise `update_qemu_config`/`update_lxc_config` `fields` as a constrained object (known keys, scalar value types, `netN`/disk-slot key patterns) instead of the `true` schema, which hid the contract and broke some clients' schema converters. Runtime validation is unchanged.
+- **Breaking for unauthenticated remote setups:** startup now fails when `Server:Host` is not loopback and `Server:Password` is blank, including the Docker image's default `0.0.0.0` bind. Set a password, or opt in with `Server:AllowUnauthenticatedRemote=true` (default false, logs a warning). The MCP endpoint also refuses non-loopback clients if the password is blanked by a configuration reload. `/healthz` reports the authentication mode, and the Docker example uses an env file instead of command-line secrets.
 
 ## v1.2.0-preview.1 - 2026-09-06
 
