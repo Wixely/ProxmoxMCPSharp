@@ -64,3 +64,11 @@ Owner: Agent. Candidate: v1.2.0-preview.1 at f7e276c.
 - Live PVE, candidate-client, installed-service, Docker Engine runtime and ARM64 runtime acceptance remain **PENDING** in the checklist above. Successful image builds do not establish runtime acceptance.
 
 Prerelease publication is complete. Next action: operator performs the authorized acceptance checks before stable promotion. No installed service was replaced.
+
+## Stable promotion decision - 2026-10-27
+
+The repository owner directed promotion of v1.2.0-preview.2 to stable v1.2.0 **without** the live acceptance listed above. This is the explicitly documented exception the stable-publication rule allows. It is not acceptance evidence.
+
+- Basis: 242 synthetic HTTP/MCP tests passed on Windows and Ubuntu CI. Real loopback sockets and TLS were checked for endpoint failure classification and certificate hostname verification.
+- Not verified: everything in the checklist above, plus live multi-node failover and access management against a live PVE realm. Treat these as unverified in v1.2.0. Management, access-management and destructive gates stay off by default.
+- The checklist remains open. Record live results against v1.2.0 or a later patch release.

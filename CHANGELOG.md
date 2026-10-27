@@ -1,5 +1,9 @@
 # Changelog
 
+## v1.2.0 - 2026-10-27
+
+- Stable release of the v1.2.0 preview line. The code is the same as v1.2.0-preview.2. Promoted by owner decision without live PVE acceptance; see [verification](docs/verification.md).
+
 ## v1.2.0-preview.2 - 2026-10-27
 
 - Add opt-in `VerifyCertificateHostname` (default false). With `CaCertificatePath`, certificates from the configured CA are accepted for any host name, as before; when enabled, they must also match the endpoint's host. Default validation and `IgnoreCertificateErrors` are unchanged.
