@@ -5,6 +5,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Hosting.WindowsServices;
+using Microsoft.Extensions.Options;
 using ProxmoxMCPSharp.Configuration;
 using ProxmoxMCPSharp.Hosting;
 using ProxmoxMCPSharp.Services;
@@ -81,6 +82,13 @@ public static class Program
                 .WithStructuredConfigurationSchemas();
 
             var server = builder.Configuration.GetSection(ServerOptions.SectionName).Get<ServerOptions>() ?? new ServerOptions();
+            var authentication = BindSecurity.Validate(server);
+            if (authentication == BindSecurity.RemoteOverride)
+            {
+                Log.Warning("UNAUTHENTICATED REMOTE ACCESS: Server:Host {Host} is reachable from other machines and Server:Password is blank. " +
+                    "Anyone who can reach port {Port} can call every enabled tool.", server.Host, server.Port);
+            }
+
             builder.WebHost.ConfigureKestrel(k =>
             {
                 if (string.Equals(server.Host, "localhost", StringComparison.OrdinalIgnoreCase))
@@ -117,6 +125,7 @@ public static class Program
                 "HTTP",
                 isService ? "WindowsService" : "Console",
                 contentRoot,
+                $"MCP authentication: {authentication}",
                 $"Read-only: {pve.IsReadOnly}",
                 $"Proxmox API: {pve.Options.BaseUrl}",
                 $"Allow destroy: {pve.Options.AllowDestroy}");
@@ -124,11 +133,12 @@ public static class Program
             app.UseMiddleware<McpPasswordMiddleware>();
 
             app.MapFavicon();
-            app.MapGet("/healthz", () => new
+            app.MapGet("/healthz", (IOptionsMonitor<ServerOptions> serverOptions) => new
             {
                 status = "ok",
                 server = "ProxmoxMCPSharp",
                 path = server.Path,
+                authentication = BindSecurity.Describe(serverOptions.CurrentValue),
                 readOnly = pve.IsReadOnly,
                 timeUtc = DateTimeOffset.UtcNow,
             });

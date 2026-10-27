@@ -142,6 +142,9 @@ public sealed class ServerOptions
     /// <summary>Service name when running as a Windows Service.</summary>
     public string WindowsServiceName { get; set; } = "ProxmoxMCPSharp";
 
-    /// <summary>Optional MCP endpoint password. Blank disables MCP password auth.</summary>
+    /// <summary>MCP endpoint password. Blank disables MCP password auth, which is only permitted for loopback binds unless AllowUnauthenticatedRemote is set.</summary>
     public string Password { get; set; } = string.Empty;
+
+    /// <summary>Permit a non-loopback bind with a blank Password. Exposes every enabled tool to anyone who can reach the port. Default false.</summary>
+    public bool AllowUnauthenticatedRemote { get; set; } = false;
 }

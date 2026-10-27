@@ -1,3 +1,4 @@
+using System.Net;
 using System.Net.Http.Headers;
 using System.Text;
 using Microsoft.Extensions.Options;
@@ -22,10 +23,24 @@ public sealed class McpPasswordMiddleware
     public async Task InvokeAsync(HttpContext context)
     {
         var options = _optionsMonitor.CurrentValue;
-        if (!context.Request.Path.StartsWithSegments(options.Path, StringComparison.OrdinalIgnoreCase)
-            || string.IsNullOrWhiteSpace(options.Password))
+        if (!context.Request.Path.StartsWithSegments(options.Path, StringComparison.OrdinalIgnoreCase))
         {
             await _next(context);
+            return;
+        }
+
+        if (string.IsNullOrWhiteSpace(options.Password))
+        {
+            // Configuration reloads can blank the password after the startup bind check, so re-check per request.
+            var remote = context.Connection.RemoteIpAddress;
+            if (options.AllowUnauthenticatedRemote || remote is not null && IPAddress.IsLoopback(remote))
+            {
+                await _next(context);
+                return;
+            }
+
+            context.Response.StatusCode = StatusCodes.Status403Forbidden;
+            await context.Response.WriteAsync("MCP authentication is not configured; unauthenticated access is limited to loopback clients.");
             return;
         }
 
