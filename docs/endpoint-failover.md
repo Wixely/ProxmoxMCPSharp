@@ -64,7 +64,9 @@ ticket is shared by all endpoints. Ticket login uses read failover, because it c
 cluster state.
 
 **TLS.** Every endpoint uses the same certificate policy: normal validation,
-`CaCertificatePath`, or `IgnoreCertificateErrors`. Failover never relaxes it.
+`CaCertificatePath` (optionally with `VerifyCertificateHostname`), or `IgnoreCertificateErrors`.
+Failover never relaxes it. With `VerifyCertificateHostname`, each endpoint's certificate must
+match that endpoint's own host.
 
 ## Observability
 

@@ -40,6 +40,12 @@ public sealed class ProxmoxOptions
     /// <summary>Optional path to a PEM file containing the cluster's CA certificate, when not ignoring validation.</summary>
     public string? CaCertificatePath { get; set; }
 
+    /// <summary>
+    /// When true, certificates accepted through <see cref="CaCertificatePath"/> must also match the endpoint's host name.
+    /// Off by default because node certificates often lack the IP address or alias used to connect.
+    /// </summary>
+    public bool VerifyCertificateHostname { get; set; } = false;
+
     /// <summary>HTTP request timeout in seconds.</summary>
     public int RequestTimeoutSeconds { get; set; } = 60;
 
