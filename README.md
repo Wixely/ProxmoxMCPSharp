@@ -32,21 +32,27 @@ Authentication supports either:
 
 - API token (preferred): `ApiTokenId` (e.g. `root@pam!mcp`) and `ApiTokenSecret`.
 - Ticket auth: `Username` (with realm), `Password`, optional `TotpCode`.
-- `Server:Password` is blank by default. Set it to require an MCP endpoint password; clients may send `Authorization: Bearer <password>`, the Basic auth password, or `X-MCP-Password`.
+- `Server:Password` sets the MCP endpoint password; clients may send `Authorization: Bearer <password>`, the Basic auth password, or `X-MCP-Password`. It is blank by default, which is only allowed while `Server:Host` is loopback (`localhost`, `127.0.0.1`, `::1`). Startup fails if the server would listen on any other address without a password. `Server:AllowUnauthenticatedRemote=true` overrides this and logs a warning; it exposes every enabled tool to anyone who can reach the port.
+- `/healthz` reports the effective MCP `authentication` mode (`password`, `none-loopback`, `none-remote-override`) without revealing the password.
 
 ## Running
 
 ### Docker (recommended)
 
+The image listens on `0.0.0.0`, so it requires `Server:Password`. Keep secrets in an environment file readable only by you rather than on the command line:
+
 ```sh
-docker run --rm -p 5705:5705 \
-  -e PROXMOXMCP_Proxmox__BaseUrl=https://your-pve:8006/ \
-  -e PROXMOXMCP_Proxmox__ApiTokenId='root@pam!mcp' \
-  -e PROXMOXMCP_Proxmox__ApiTokenSecret='...' \
-  -e PROXMOXMCP_Proxmox__IgnoreCertificateErrors=true \
-  -e PROXMOXMCP_Proxmox__AllowedNodes__0=pve1 \
-  -e PROXMOXMCP_Server__Password=change-me \
-  ghcr.io/wixely/proxmoxmcpsharp:latest
+cat > proxmoxmcp.env <<'EOF'
+PROXMOXMCP_Proxmox__BaseUrl=https://your-pve:8006/
+PROXMOXMCP_Proxmox__ApiTokenId=root@pam!mcp
+PROXMOXMCP_Proxmox__ApiTokenSecret=...
+PROXMOXMCP_Proxmox__IgnoreCertificateErrors=true
+PROXMOXMCP_Proxmox__AllowedNodes__0=pve1
+PROXMOXMCP_Server__Password=a-long-random-password
+EOF
+chmod 600 proxmoxmcp.env
+
+docker run --rm -p 5705:5705 --env-file proxmoxmcp.env ghcr.io/wixely/proxmoxmcpsharp:latest
 ```
 
 ### Standalone

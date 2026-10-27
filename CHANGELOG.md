@@ -1,5 +1,10 @@
 # Changelog
 
+## Unreleased
+
+- Advertise `update_qemu_config`/`update_lxc_config` `fields` as a constrained object (known keys, scalar value types, `netN`/disk-slot key patterns) instead of the `true` schema, which hid the contract and broke some clients' schema converters. Runtime validation is unchanged.
+- **Breaking for unauthenticated remote setups:** startup now fails when `Server:Host` is not loopback and `Server:Password` is blank, including the Docker image's default `0.0.0.0` bind. Set a password, or opt in with `Server:AllowUnauthenticatedRemote=true` (default false, logs a warning). The MCP endpoint also refuses non-loopback clients if the password is blanked by a configuration reload. `/healthz` reports the authentication mode, and the Docker example uses an env file instead of command-line secrets.
+
 ## v1.2.0-preview.1 - 2026-09-06
 
 - Preserve observed task outcomes when log inspection fails, and leave restart requirements unverified when pending-configuration readback is missing or malformed.

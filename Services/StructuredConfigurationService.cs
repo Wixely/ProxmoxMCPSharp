@@ -1,6 +1,7 @@
 using System.Globalization;
 using System.Net;
 using System.Text.Json;
+using System.Text.Json.Nodes;
 using System.Text.RegularExpressions;
 
 namespace ProxmoxMCPSharp.Services;
@@ -269,6 +270,56 @@ internal sealed class StructuredConfigurationService(ProxmoxClient pve)
             else throw new ArgumentException("Expected key=value configuration fields.");
         }
         return result;
+    }
+
+    internal static JsonObject FieldsSchema(string kind)
+    {
+        var qemu = kind == "qemu";
+        static JsonObject Text(string description, int? maxLength = null)
+        {
+            var schema = new JsonObject { ["type"] = "string", ["description"] = description };
+            if (maxLength.HasValue) schema["maxLength"] = maxLength.Value;
+            return schema;
+        }
+        static JsonObject Integer(int minimum, int maximum, string description) =>
+            new() { ["type"] = "integer", ["minimum"] = minimum, ["maximum"] = maximum, ["description"] = description };
+
+        var properties = new JsonObject
+        {
+            [qemu ? "name" : "hostname"] = Text("DNS-style guest name: dot-separated labels of letters, digits and inner hyphens.", 253),
+            ["description"] = Text("Guest notes. Control characters other than tab, CR and LF are rejected.", 65535),
+            ["onboot"] = new JsonObject { ["type"] = "boolean", ["description"] = "Start the guest when the node boots." },
+            ["startup"] = Text("Comma-separated order=, up= and down= integers from 0 to 86400, e.g. order=1,up=30."),
+            ["tags"] = Text("Semicolon-separated tags of letters, digits, underscore, dot, plus and hyphen.", 4096),
+            ["cores"] = Integer(1, 1024, "CPU cores. Requires AllowResourceChanges to submit."),
+            ["memory"] = Integer(16, 1048576, "Memory in MiB. Requires AllowResourceChanges to submit."),
+            ["cpulimit"] = new JsonObject { ["type"] = "number", ["minimum"] = 0, ["maximum"] = 1024, ["description"] = "CPU limit; 0 is unlimited. Requires AllowResourceChanges to submit." },
+            ["cpuunits"] = Integer(1, qemu ? 262144 : 10000, "CPU scheduler weight. Requires AllowResourceChanges to submit."),
+        };
+        if (qemu)
+        {
+            properties["sockets"] = Integer(1, 1024, "CPU sockets. Requires AllowResourceChanges to submit.");
+            properties["vcpus"] = Integer(1, 1024, "Hotplugged vCPUs; at most cores times sockets. Requires AllowResourceChanges to submit.");
+            properties["balloon"] = Integer(0, 1048576, "Balloon target in MiB; at most memory. Requires AllowResourceChanges to submit.");
+        }
+        else properties["swap"] = Integer(0, 1048576, "Swap in MiB. Requires AllowResourceChanges to submit.");
+        properties["delete"] = Text($"Managed disk slot to detach, e.g. {(qemu ? "scsi1" : "mp0")}. Must be the only field. Requires AllowDiskManagement to submit.");
+        properties["digest"] = new JsonObject { ["type"] = "string", ["pattern"] = "^[0-9a-fA-F]{40}$", ["description"] = "Alternative to expectedDigest; both must match when supplied." };
+
+        var slots = qemu ? "scsi(?:[0-9]|[12][0-9]|30)|virtio(?:[0-9]|1[0-5])|sata[0-5]|ide[0-3]" : "rootfs|mp(?:[0-9]|[12][0-9]|3[01])";
+        var device = qemu
+            ? "netN (0-31): model=virtio|e1000|e1000e|rtl8139|vmxnet3,bridge=vmbr0[,macaddr=,tag=,trunks=,firewall=,link_down=,mtu=,queues=,rate=]. Disk slot: storage:sizeGiB[,cache=,discard=on|ignore,ssd=,iothread=] to allocate, or an unused volume owned by this VM to attach."
+            : "netN (0-31): name=eth0,bridge=vmbr0[,type=veth,hwaddr=,ip=dhcp|manual|CIDR,gw=,ip6=auto|dhcp|manual|CIDR,gw6=,tag=,trunks=,firewall=,link_down=,mtu=,rate=]. rootfs/mpN: storage:sizeGiB[,mp=/path,backup=,ro=] to allocate a managed volume.";
+        return new JsonObject
+        {
+            ["type"] = "object",
+            ["description"] = "Configuration fields to change, keyed by Proxmox option name. Values are strings, numbers or booleans; null, arrays and nested objects are rejected. A disk field must be sent alone.",
+            ["minProperties"] = 1,
+            ["maxProperties"] = 64,
+            ["properties"] = properties,
+            ["propertyNames"] = new JsonObject { ["pattern"] = $"^(?:{string.Join('|', properties.Select(p => p.Key))}|net(?:[0-9]|[12][0-9]|3[01])|{slots})$" },
+            ["additionalProperties"] = Text(device + " Disk changes require AllowDiskManagement to submit.", 4096),
+        };
     }
 
     private static bool IsDisk(string key) => Regex.IsMatch(key, @"\A(?:(?:ide|sata|scsi|virtio|mp|unused)[0-9]+|rootfs|efidisk0|tpmstate0)\z");
